@@ -21,12 +21,12 @@ consteval auto have_cexpr_thing_helper(T) -> bool {
 
 #define HAVE_CEXPR_THING(_thing, ...) requires { have_cexpr_thing_helper(_thing(__VA_ARGS__)); }
 
-inline static constexpr bool have_builtin_fabsf = STF_FUNC_EXISTS(__builtin_fabsf, 0.F);
-inline static constexpr bool have_constexpr_fabsf = HAVE_CEXPR_THING(__builtin_fabsf, 0.F);
+inline static constexpr bool have_builtin_fabsf = STF_FUNC_EXISTS(__builtin_fabsf, 0.f);
+inline static constexpr bool have_constexpr_fabsf = HAVE_CEXPR_THING(__builtin_fabsf, 0.f);
 inline static constexpr bool have_builtin_fabs = STF_FUNC_EXISTS(__builtin_fabs, 0.);
 inline static constexpr bool have_constexpr_fabs = HAVE_CEXPR_THING(__builtin_fabs, 0.);
-inline static constexpr bool have_builtin_fabsl = STF_FUNC_EXISTS(__builtin_fabsl, 0.L);
-inline static constexpr bool have_constexpr_fabsl = HAVE_CEXPR_THING(__builtin_fabsl, 0.L);
+inline static constexpr bool have_builtin_fabsl = STF_FUNC_EXISTS(__builtin_fabsl, 0.l);
+inline static constexpr bool have_constexpr_fabsl = HAVE_CEXPR_THING(__builtin_fabsl, 0.l);
 
 #undef HAVE_CEXPR_THING
 

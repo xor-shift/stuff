@@ -6,7 +6,7 @@
 #include <cinttypes>
 #include <concepts>
 
-namespace stf::cemath::detail {
+namespace stf::cemath {
 
 #define ABS_MACRO(_v) ((_v) < 0 ? -(_v) : (_v))
 #define ABS_FACTORY(_name, _type) \

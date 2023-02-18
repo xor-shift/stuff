@@ -13,6 +13,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE stuff_core)
 
 add_executable(${PROJECT_NAME}_tests
         test/basic.cpp
+        test/classification.cpp
         test/rounding.cpp
 
         test/bit.cpp

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stuff/cemath/detail/soft_float/ieee_esque.ipp>
+
 #include <stuff/cemath/bit.hpp>
 #include <stuff/core/integers.hpp>
 
@@ -21,7 +23,7 @@ struct ieee_float_desc_dp {
 };
 
 template<typename Desc>
-struct ieee_soft_float {
+struct ieee_soft_float : ieee_esque_float<ieee_soft_float<Desc>> {
     using repr_type = typename Desc::repr_type;
 
     constexpr ieee_soft_float() noexcept = default;
@@ -32,22 +34,16 @@ struct ieee_soft_float {
 
     constexpr auto sign_bit() const -> bool { return get_bit(m_repr, m_exponent_bits + m_mantissa_bits); }
 
-    constexpr auto abs() const -> ieee_soft_float {
-        ieee_soft_float copy = *this;
-        copy.set_sign(false);
-        return copy;
-    }
+    constexpr auto trunc() -> ieee_soft_float&;
+    constexpr auto inverse_trunc() -> ieee_soft_float&;
+    constexpr auto round() -> ieee_soft_float&;
 
-    constexpr auto classify() const -> classification;
-
-    constexpr auto trunc() const -> ieee_soft_float;
-    constexpr auto inverse_trunc() const -> ieee_soft_float;
-    constexpr auto round() const -> ieee_soft_float;
-
-    constexpr auto ceil() const -> ieee_soft_float { return sign_bit() ? trunc() : inverse_trunc(); }
-    constexpr auto floor() const -> ieee_soft_float { return sign_bit() ? inverse_trunc() : trunc(); }
+    constexpr auto ceil() -> ieee_soft_float& { return sign_bit() ? trunc() : inverse_trunc(); }
+    constexpr auto floor() -> ieee_soft_float& { return sign_bit() ? inverse_trunc() : trunc(); }
 
 private:
+    friend struct ieee_esque_float<ieee_soft_float<Desc>>;
+
     inline static constexpr repr_type m_exponent_bits = Desc::exponent_bits;
     inline static constexpr repr_type m_exponent_mask = ((repr_type)1 << m_exponent_bits) - 1;
     inline static constexpr repr_type m_mantissa_bits = Desc::mantissa_bits;
@@ -59,13 +55,27 @@ private:
     constexpr void set_sign(bool sign) { m_repr = set_bit(m_repr, m_exponent_bits + m_mantissa_bits, sign); }
     constexpr auto exponent() const -> repr_type { return (m_repr >> m_mantissa_bits) & m_exponent_mask; }
     constexpr auto mantissa() const -> repr_type { return m_repr & m_mantissa_mask; }
+    constexpr auto fraction() const -> repr_type { return mantissa(); }
 
-    constexpr auto set_to_zero(bool preserve_sign) -> ieee_soft_float{
+    constexpr auto set_to_zero(bool preserve_sign) -> ieee_soft_float& {
         if (preserve_sign) {
             m_repr &= ~m_payload_mask;
         } else {
             m_repr = 0;
         }
+        return *this;
+    }
+
+    constexpr auto set_to_pow_2(int power, bool preserve_sign) -> ieee_soft_float& {
+        int exponent = power + m_exponent_mask / 2;
+
+        if (exponent >= m_exponent_mask || exponent < 0) {
+            std::unreachable();
+        }
+
+        m_repr &= ~m_payload_mask;
+        m_repr |= static_cast<repr_type>(exponent) << m_mantissa_bits;
+
         return *this;
     }
 
@@ -80,7 +90,9 @@ private:
 };
 
 template<typename Desc>
-constexpr auto operator<=>(ieee_soft_float<Desc> lhs, ieee_soft_float<Desc> rhs) -> std::partial_ordering;
+constexpr auto operator<=>(ieee_soft_float<Desc> lhs, ieee_soft_float<Desc> rhs) -> std::partial_ordering {
+    return ieee_esque_float<ieee_soft_float<Desc>>::order(lhs, rhs);
+}
 
 static_assert(concepts::soft_float<ieee_soft_float<ieee_float_desc_dp>>);
 
@@ -96,7 +108,5 @@ struct native_float<double> : std::type_identity<detail::ieee_soft_float<detail:
 
 }  // namespace stf::cemath
 
-#include <stuff/cemath/detail/soft_float/ieee/classification.ipp>
-#include <stuff/cemath/detail/soft_float/ieee/ordering.ipp>
 #include <stuff/cemath/detail/soft_float/ieee/round.ipp>
 #include <stuff/cemath/detail/soft_float/ieee/trunc.ipp>

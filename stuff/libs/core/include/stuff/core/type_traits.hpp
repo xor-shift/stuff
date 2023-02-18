@@ -1,8 +1,10 @@
 #pragma once
 
+#include <stuff/core/detail/padding.hpp>
+
 #include <concepts>
 
-namespace stf {
+namespace stf::core {
 
 template<typename T, typename U>
 requires (std::is_arithmetic_v<T>) && (std::is_arithmetic_v<U>)
