@@ -8,6 +8,7 @@ AlignEscapedNewlines: Left
 AlignTrailingComments: true
 BreakBeforeInheritanceComma: true
 BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
 IndentPPDirectives: AfterHash
 BreakBeforeBraces: Custom
 BraceWrapping:

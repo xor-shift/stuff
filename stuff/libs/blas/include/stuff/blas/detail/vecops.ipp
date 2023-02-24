@@ -8,7 +8,7 @@ namespace stf::blas {
 // return type is based on promotion rules
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto dot(T const& lhs, U const& rhs) -> type_promotion_t<typename T::value_type, typename U::value_type> {
+constexpr auto dot(T const& lhs, U const& rhs) -> core::type_promotion_t<typename T::value_type, typename U::value_type> {
     auto ret = lhs[0] * rhs[0];
 
     for (usize i = 1; i < T::size; i++) {
@@ -25,7 +25,7 @@ constexpr auto cross(T const& lhs, U const& rhs) -> concepts::nd_vector<3> auto{
     auto det_1 = lhs[0] * rhs[2] - lhs[2] * rhs[0];
     auto det_2 = lhs[0] * rhs[1] - lhs[1] * rhs[0];
 
-    using ret_value_type = type_promotion_t<typename T::value_type, typename U::value_type>;
+    using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type>;
 
     concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
     ret[0] = det_0;
@@ -38,7 +38,7 @@ constexpr auto cross(T const& lhs, U const& rhs) -> concepts::nd_vector<3> auto{
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size && T::size == 7)
 constexpr auto cross(T const& x, U const& y) -> concepts::nd_vector<7> auto{
-    using ret_value_type = type_promotion_t<typename T::value_type, typename U::value_type>;
+    using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type>;
 
     // clang-format off
 #define IDK_SOME_FACTORY(a, b, c, d, e, f, g, h, i, j, k, l) \
@@ -67,7 +67,7 @@ constexpr auto elementwise_fn(T const& lhs, U const& rhs, Fn&& functor = {}) {
     // TODO: implement expression templates, maybe
     // real to-do: benchmark expression templates versus straightforward operations
 
-    using ret_value_type = type_promotion_t<typename T::value_type, typename U::value_type>;
+    using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type>;
     concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
 
     for (usize i = 0; i < T::size; i++) {
@@ -101,16 +101,28 @@ constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::s
     return detail::elementwise_fn(lhs, rhs, std::minus<>{});
 }
 
+template<concepts::vector T>
+constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto {
+    using ret_type = typename T::template rebind<typename T::value_type>;
+    concepts::nd_vector_of_t<typename T::value_type, T::size> auto ret = ret_type{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = v[i] < 0 ? -v[i] : v[i];
+    }
+
+    return ret;
+}
+
 template<concepts::vector T, concepts::vector U>
 constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering {
     if constexpr (T::size != U::size) {
         return std::partial_ordering::unordered;
     }
 
-    std::strong_ordering ret = lhs[0] <=> rhs[0];
+    std::partial_ordering ret = lhs[0] <=> rhs[0];
 
     for (usize i = 1; i < T::size; i++) {
-        std::strong_ordering t = lhs[i] <=> rhs[i];
+        std::partial_ordering t = lhs[i] <=> rhs[i];
         if (t != ret) {
             return std::partial_ordering::unordered;
         }
@@ -143,7 +155,7 @@ constexpr auto swizzle_index(char c) -> usize {
     }
 }
 
-template<StringLiteral Lit>
+template<string_literal Lit>
 constexpr auto swizzle_needed_dimensions() -> usize {
     usize dims = 0;
     for (char c : Lit) {
@@ -152,7 +164,7 @@ constexpr auto swizzle_needed_dimensions() -> usize {
     return dims;
 }
 
-template<StringLiteral Lit, typename T>
+template<string_literal Lit, typename T>
 concept can_swizzle =                                                                  //
   concepts::vector<T> &&                                                               //
   std::all_of(Lit.begin(), Lit.end(), [](char c) { return 'z' >= c && c >= 'w'; }) &&  //
@@ -160,7 +172,7 @@ concept can_swizzle =                                                           
 
 }  // namespace detail
 
-template<StringLiteral Lit, concepts::vector T>
+template<string_literal Lit, concepts::vector T>
 constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto{
     static_assert(detail::can_swizzle<Lit, T>);
 

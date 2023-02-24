@@ -2,6 +2,7 @@
 
 #include <stuff/blas/vector.hpp>
 
+#include <cmath>
 #include <span>
 
 namespace stf::blas {
@@ -133,7 +134,7 @@ static_assert(concepts::matrix<matrix<int, 3, 4>>);
 static_assert(concepts::matrix_backend<matrix<int, 3, 4>>);
 
 template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
-requires concepts::matrix_backend<matrix_type<T, Size, Size>>
+    requires concepts::matrix_backend<matrix_type<T, Size, Size>>
 constexpr auto identity_matrix() -> matrix_type<T, Size, Size>;
 
 template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
@@ -144,7 +145,7 @@ constexpr auto rotation_matrix(T theta) -> matrix_type<T, 2, 2>;
 /// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
 template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
     requires concepts::matrix_backend<matrix_type<T, 3, 3>>
-constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 2, 2>;
+constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3>;
 
 /// @return
 /// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a

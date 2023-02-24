@@ -2,6 +2,38 @@
 
 namespace stf::blas {
 
+template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type>
+    requires concepts::matrix_backend<matrix_type<T, Size, Size>>
+constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {}
+
+template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
+    requires concepts::matrix_backend<matrix_type<T, 2, 2>>
+constexpr auto rotation_matrix(T theta) -> matrix_type<T, 2, 2> {
+    T s = static_cast<T>(std::sin(theta));
+    T c = static_cast<T>(std::cos(theta));
+
+    matrix_type<T, 2, 2> ret{c, -s, s, c};
+}
+
+/// Rotation matrix in 3 dimensions.
+/// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
+template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
+    requires concepts::matrix_backend<matrix_type<T, 3, 3>>
+constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3> {
+    T xs = static_cast<T>(std::sin(x));
+    T xc = static_cast<T>(std::cos(x));
+    T ys = static_cast<T>(std::sin(y));
+    T yc = static_cast<T>(std::cos(y));
+    T zs = static_cast<T>(std::sin(z));
+    T zc = static_cast<T>(std::cos(z));
+
+    matrix_type<T, 3, 3> x_mat{1, 0, 0, 0, xc, -xs, 0, xs, xc};
+    matrix_type<T, 3, 3> y_mat{yc, 0, ys, 0, 1, 0, -ys, 0, yc};
+    matrix_type<T, 3, 3> z_mat{zc, -zs, 0, zs, zc, 0, 0, 0, 1};
+
+    return (z_mat * y_mat) * x_mat;
+}
+
 namespace detail {
 
 template<concepts::matrix T, concepts::matrix U, typename Fn>

@@ -36,7 +36,8 @@ static_assert(concepts::vector<vector<int, 3>>);
 /// The dot product between <code>lhs</code> and <code>rhs</code>.
 /// Return type is determined based on promotion rules.
 template<concepts::vector T, concepts::vector U>
-constexpr auto dot(T const& lhs, U const& rhs) -> type_promotion_t<typename T::value_type, typename U::value_type>;
+constexpr auto dot(T const& lhs, U const& rhs)
+  -> core::type_promotion_t<typename T::value_type, typename U::value_type>;
 
 /// @return
 /// The cross product of <code>lhs</code> and <code>rhs</code> or a
@@ -61,6 +62,9 @@ constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::val
 /// vector-expression equivalent to it.
 template<concepts::vector T, concepts::vector U>
 constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+
+template<concepts::vector T>
+constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto;
 
 /// @return
 /// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n
@@ -87,7 +91,7 @@ constexpr auto operator==(concepts::vector auto const& lhs, concepts::vector aut
 /// The swizzled vector.
 /// @example
 /// <pre>static_assert(swizzle\<"wztsrgzw">(vector\<int, 4>{0,1,2,3}) == vector\<int, 8>{3,2,1,0,0,1,2,3})</pre>
-template<StringLiteral Lit, concepts::vector T>
+template<string_literal Lit, concepts::vector T>
 constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto;
 
 }  // namespace stf::blas
