@@ -1,5 +1,7 @@
 #pragma once
+#include <stuff/expected/detail/storage.hpp>
 
+#include <stuff/expected/detail/exception.hpp>
 #include <stuff/expected/unexpected.hpp>
 #include <stuff/scope/scope_guard.hpp>
 
@@ -11,31 +13,12 @@ namespace stf::expected {
 
 struct unexpect_t {};
 
-template<typename T>
-struct bad_expected_access;
-
-template<>
-struct bad_expected_access<void> : std::exception {
-    const char* what() const noexcept override { return "bad_expected_access"; }
-};
-
-template<typename E>
-struct bad_expected_access : bad_expected_access<void> {
-    explicit bad_expected_access(E error)
-        : m_error(std::move(error)) {}
-
-    auto error() const& noexcept -> const E& { return m_error; }
-    auto error() & noexcept -> E& { return m_error; }
-    auto error() const&& noexcept -> const E&& { return std::move(m_error); }
-    auto error() && noexcept -> E&& { return std::move(m_error); }
-
-private:
-    E m_error;
-};
+template<typename T, typename E>
+struct expected;
 
 template<typename T, typename E>
     requires(!std::is_void_v<E>) && (!std::is_void_v<T>)
-struct expected {
+struct expected<T, E> {
     // FIXME: clang's overload resolution is fucky, we can't make use of implicitly deleted default functions.
     // as a result, this class is not standards compliant and can never be a trivial type. fixing this issue should be
     // fairly easy after clang 16.
@@ -57,7 +40,7 @@ private:
       std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE>&> ||        //
       std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE>> ||         //
       std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE> const&> ||  //
-      std::is_constructible_v<const unexpected<E>, expected<OtherT, OtherE>>;
+      std::is_constructible_v<unexpected<E>, const expected<OtherT, OtherE>>;
 
     template<typename OtherT, typename OtherE>
     static constexpr bool different_expected_explicit_helper =  //
@@ -81,10 +64,9 @@ public:
     , m_has_value(true) {}
 
     constexpr expected(expected const& other)
-        noexcept(std::is_nothrow_copy_constructible_v<T>&& std::is_nothrow_copy_constructible_v<E>)
+        noexcept(std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_constructible_v<E>)
         requires std::is_copy_constructible_v<T> && std::is_copy_constructible_v<E>
-    : m_has_value(other.m_has_value)
-        , m_no_init(true) {
+    : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), other.m_value);
         } else {
@@ -95,8 +77,7 @@ public:
     constexpr expected(expected&& other)
         noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_constructible_v<E>)
         requires std::is_move_constructible_v<T> && std::is_move_constructible_v<E>
-    : m_no_init(true)
-    , m_has_value(other.m_has_value) {
+    : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), std::move(other).m_value);
         } else {
@@ -111,8 +92,7 @@ public:
         explicit(different_expected_explicit_helper<OtherT const&, OtherE const&>)
     constexpr expected(expected<OtherT, OtherE> const& other)
         noexcept(std::is_nothrow_constructible_v<T, OtherT const&> && std::is_nothrow_constructible_v<T, OtherE const&>)
-    : m_no_init(true)
-    , m_has_value(other.m_has_value) {
+    : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), other.m_value);
         } else {
@@ -127,8 +107,7 @@ public:
         explicit(different_expected_explicit_helper<OtherT, OtherE>)
     constexpr expected(expected<OtherT, OtherE>&& other)
         noexcept(std::is_nothrow_constructible_v<T, OtherT> && std::is_nothrow_constructible_v<T, OtherE>)
-    : m_no_init(true)
-    , m_has_value(other.m_has_value) {
+    : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), std::move(other).m_value);
         } else {
@@ -149,7 +128,7 @@ public:
 
     template<typename OtherE>
         requires std::is_constructible_v<E, OtherE const&>
-        explicit(!std::is_constructible_v<OtherE const&, E>)
+        explicit(!std::is_convertible_v<OtherE const&, E>)
     constexpr expected(unexpected<OtherE> const& v)
         noexcept(std::is_nothrow_constructible_v<E, OtherE const&>)
     : m_unexpected(v.error())
@@ -157,7 +136,7 @@ public:
 
     template<typename OtherE>
         requires std::is_constructible_v<E, OtherE>
-        explicit(!std::is_constructible_v<OtherE, E>)
+        explicit(!std::is_convertible_v<OtherE, E>)
     constexpr expected(unexpected<OtherE>&& v)
         noexcept(std::is_nothrow_constructible_v<E, OtherE>)
     : m_unexpected(std::move(v).error())
@@ -211,8 +190,6 @@ public:
         } else {
             std::fill(std::begin(m_fill_e), std::end(m_fill_e), '\0');
         }
-
-        m_no_init = true;
     }
 
     // clang-format off
@@ -439,7 +416,6 @@ private:
     union {
         T m_value;
         E m_unexpected;
-        bool m_no_init;
 
         char m_fill_t[sizeof(T)];
         char m_fill_e[sizeof(E)];
@@ -487,6 +463,243 @@ private:
                 std::construct_at(target, std::forward<U>(v));  // possible exception
 
                 guard.release();
+            }
+        }
+
+        m_has_value = IsValue;
+    }
+};
+
+template<typename T, typename E>
+    requires(!std::is_void_v<E>) && std::is_void_v<T>
+struct expected<T, E> {
+private:
+    template<typename OtherT, typename OtherE>
+    static constexpr bool different_expected_helper =                             //
+      std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE>&> ||        //
+      std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE>> ||         //
+      std::is_constructible_v<unexpected<E>, expected<OtherT, OtherE> const&> ||  //
+      std::is_constructible_v<unexpected<E>, const expected<OtherT, OtherE>>;
+
+public:
+    using value_type = T;
+    using error_type = E;
+    using unexpected_type = unexpected<E>;
+
+    template<typename U>
+    using rebind = expected<U, E>;
+
+    /* UNCOMMENT AFTER CLANG >= 16
+     * also add requirements that E is not trivially `verb`-able in the corresponding nontrivial functions
+     *
+     * expected(const expected&) = default;
+     * expected(expected&&) = default;
+     * constexpr ~expected() = default;
+     *
+     */
+
+    constexpr expected() noexcept
+        : m_value()
+        , m_has_value(true) {}
+
+    // clang-format off
+
+    constexpr expected(expected const& other)
+        noexcept(std::is_nothrow_copy_constructible_v<E>)
+        requires std::is_copy_constructible_v<E>
+    : m_value()
+    , m_has_value(other.m_has_value) {
+        if (!m_has_value) {
+            std::construct_at(std::addressof(m_unexpected), other.m_unexpected);
+        }
+        // else, m_value is initialised
+    }
+
+    constexpr expected(expected&& other)
+        noexcept(std::is_nothrow_move_constructible_v<E>)
+        requires std::is_move_constructible_v<E>
+    : m_value()
+    , m_has_value(other.m_has_value) {
+        if (!m_has_value) {
+            std::construct_at(std::addressof(m_unexpected), std::move(other).m_unexpected);
+        }
+    }
+
+    template<typename OtherT, typename OtherE>
+        requires std::is_void_v<OtherT> &&
+                 std::is_constructible_v<E, OtherE const&> &&
+                 (!different_expected_helper<OtherT, OtherE>)
+        explicit(!std::is_convertible_v<OtherE const&, E>)
+    constexpr expected(expected<OtherT, OtherE> const& other)
+    : m_value()
+    , m_has_value(other.m_has_value) {
+        if (!m_has_value) {
+            std::construct_at(std::addressof(m_unexpected), other.m_unexpected);
+        }
+    }
+
+    template<typename OtherT, typename OtherE>
+        requires std::is_void_v<OtherT> &&
+                 std::is_constructible_v<E, OtherE> &&
+                 (!different_expected_helper<OtherT, OtherE>)
+        explicit(!std::is_convertible_v<OtherE, E>)
+    constexpr expected(expected<OtherT, OtherE>&& other)
+    : m_value()
+    , m_has_value(other.m_has_value) {
+        if (!m_has_value) {
+            std::construct_at(std::addressof(m_unexpected), other.m_unexpected);
+        }
+    }
+
+    template<typename OtherE = E>
+        requires std::is_constructible_v<E, OtherE const&>
+        explicit(!std::is_convertible_v<OtherE const&, E>)
+    constexpr expected(unexpected<OtherE> const& other)
+    : m_unexpected(other.error())
+    , m_has_value(false) {}
+
+    template<typename OtherE = E>
+        requires std::is_constructible_v<E, OtherE>
+        explicit(!std::is_convertible_v<OtherE, E>)
+    constexpr expected(unexpected<OtherE>&& other)
+    : m_unexpected(std::move(other).error())
+    , m_has_value(false) {}
+
+    template<typename... Args>
+        requires std::is_constructible_v<E, Args...>
+        explicit
+    constexpr expected(unexpect_t, Args&&... args)
+        noexcept(std::is_nothrow_constructible_v<E, Args...>)
+    : m_unexpected(std::forward<Args>(args)...)
+    , m_has_value(false) {}
+
+    template<typename U, typename... Args>
+        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        explicit
+    constexpr expected(unexpect_t, std::initializer_list<U> il, Args&&... args)
+        noexcept(std::is_nothrow_constructible_v<E, std::initializer_list<U>&, Args...>)
+    : m_unexpected(il, std::forward<Args>(args)...)
+    , m_has_value(false) {}
+
+    explicit constexpr expected(std::in_place_t) noexcept
+    : m_value()
+    , m_has_value(true) {}
+
+    constexpr ~expected() noexcept(std::is_nothrow_destructible_v<E>) {
+        if (!m_has_value) {
+            std::destroy_at(std::addressof(m_unexpected));
+        }
+    }
+
+    constexpr auto operator=(expected const& other)
+        noexcept(std::is_nothrow_copy_constructible_v<E>&& std::is_nothrow_copy_assignable_v<E>) -> expected&
+        requires std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>
+    {
+        if (other.m_has_value) {
+            assign<true>(other.m_value);
+        } else {
+            assign<false>(other.m_unexpected);
+        }
+
+        return *this;
+    }
+
+    constexpr auto operator=(expected&& other)
+        noexcept(std::is_nothrow_move_constructible_v<E>&& std::is_nothrow_move_assignable_v<E>) -> expected&
+        requires std::is_move_constructible_v<E> && std::is_move_assignable_v<E>
+    {
+        if (other.m_has_value) {
+            assign<true>(std::move(other.m_value));
+        } else {
+            assign<false>(std::move(other.m_unexpected));
+        }
+
+        return *this;
+    }
+
+    template<typename OtherE>
+    constexpr auto operator=(unexpected<OtherE> const& other)
+        noexcept(std::is_nothrow_copy_constructible_v<E>&& std::is_nothrow_copy_assignable_v<E>) -> expected&
+        requires std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>
+    {
+        assign<false>(other.error());
+
+        return *this;
+    }
+
+    template<typename OtherE>
+    constexpr auto operator=(unexpected<OtherE>&& other)
+        noexcept(std::is_nothrow_copy_constructible_v<E>&& std::is_nothrow_copy_assignable_v<E>) -> expected&
+        requires std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>
+    {
+        assign<false>(std::move(other.error()));
+
+        return *this;
+    }
+
+    constexpr void swap(expected& other)
+        noexcept(std::is_nothrow_swappable_v<E&> && std::is_nothrow_move_constructible_v<E>)
+        requires std::is_swappable_v<E> && std::is_move_constructible_v<E>
+    {
+        // STUB
+    }
+
+    // clang-format on
+
+    constexpr void emplace() noexcept { assign<true>(); }
+
+    constexpr explicit operator bool() const noexcept { return m_has_value; }
+    constexpr auto has_value() const noexcept -> bool { return m_has_value; }
+    constexpr auto error() const& noexcept -> E const& { return m_unexpected; }
+    constexpr auto error() & noexcept -> E& { return m_unexpected; }
+    constexpr auto error() const&& noexcept -> E const&& { return std::move(m_unexpected); }
+    constexpr auto error() && noexcept -> E&& { return std::move(m_unexpected); }
+
+#pragma push_macro("VALUE_FACTORY")
+#define VALUE_FACTORY(_modifier)                        \
+    constexpr void value() _modifier {                  \
+        if (!has_value()) {                             \
+            throw bad_expected_access<E>(m_unexpected); \
+        }                                               \
+                                                        \
+        return;                                         \
+    }
+
+    VALUE_FACTORY(const&)
+    VALUE_FACTORY(&)
+    VALUE_FACTORY(const&&)
+    VALUE_FACTORY(&&)
+
+#undef VALUE_FACTORY
+#pragma pop_macro("VALUE_FACTORY")
+
+private:
+    union {
+        struct {
+        } m_value;
+        E m_unexpected;
+
+        char m_fill[sizeof(E)];
+    };
+
+    bool m_has_value;
+
+    template<bool IsValue, typename U>
+    constexpr void assign(U&& v)  //
+      noexcept(IsValue ? std::is_nothrow_destructible_v<E> ://
+                         std::is_nothrow_constructible_v<E, U> && std::is_nothrow_assignable_v<E, U>)  //
+    {
+        if constexpr (IsValue) {
+            if (!m_has_value) {
+                std::destroy_at(std::addressof(m_unexpected));
+            }
+
+            m_value = {};
+        } else {
+            if (m_has_value) {
+                std::construct_at(std::addressof(m_unexpected), std::forward<U>(v));
+            } else {
+                m_unexpected = std::forward<U>(v);
             }
         }
 

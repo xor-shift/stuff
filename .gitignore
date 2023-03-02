@@ -1,0 +1,6 @@
+# for scc
+cmake-build-*
+
+**/cmake-build-*
+**/thirdparty
+.idea
