@@ -23,9 +23,11 @@ struct lossless_encoder {
             return;
         }
 
-        stf::scope::scope_exit scope_exit{[this, c] {
+        u8 c_hash = c.hash();
+
+        stf::scope::scope_exit scope_exit{[this, c, c_hash] {
             m_prev_color = c;
-            m_hash_table[c.hash()] = c;
+            m_hash_table[c_hash % 64] = c;
         }};
 
         if (m_run_length != 0) {
@@ -33,8 +35,8 @@ struct lossless_encoder {
             m_run_length = 0;
         }
 
-        if (u8 hash = c.hash(); m_hash_table[hash] == c) {
-            emit_index(hash);
+        if (m_hash_table[c_hash % 64] == c) {
+            emit_index(c_hash % 64);
             return;
         }
 
@@ -59,7 +61,7 @@ struct lossless_encoder {
         return m_it;
     }
 
-private:
+protected:
     It m_it;
 
     std::array<color, 64> m_hash_table;
@@ -88,10 +90,7 @@ private:
     }
 
     constexpr void emit_index(u8 index) {
-        if (index & 0xC0) {
-            std::unreachable();
-        }
-
+        assume((index & 0xC0) == 0);
         emit_byte(index);
     }
 
@@ -129,11 +128,83 @@ private:
     }
 
     constexpr void emit_run(usize run_length) {
-        if (run_length >= 62 || run_length == 0) {
-            std::unreachable();
+        assume(run_length <= 62 && run_length != 0);
+        emit_byte(static_cast<u8>(0xC0 | (run_length - 1)));
+    }
+};
+
+template<typename It>
+struct tolerant_encoder : lossless_encoder<It> {
+    constexpr tolerant_encoder(It it, double tolerance)
+        : lossless_encoder<It>(it)
+        , m_tolerance(tolerance) {}
+
+    constexpr void pixel(color c) {
+        if (auto res = try_prev(c); res) {
+            return lossless_encoder<It>::pixel(*res);
         }
 
-        emit_byte(static_cast<u8>(0xC0 | (run_length - 1)));
+        //if (auto res = try_hash(c); res) {
+        //    return lossless_encoder<It>::pixel(*res);
+        //}
+
+        return lossless_encoder<It>::pixel(c);
+    }
+
+protected:
+    double m_tolerance;
+
+private:
+    static constexpr auto distance(color lhs, color rhs) -> double {
+        double d_r = lhs.r - rhs.r;
+        double d_g = lhs.g - rhs.g;
+        double d_b = lhs.b - rhs.b;
+
+        double dist = std::sqrt(d_r * d_r + d_g * d_g + d_b * d_b);
+
+        return dist;
+    }
+
+    constexpr auto try_diff(color c, double dist) -> std::optional<color> {
+        return std::nullopt;
+    }
+
+    constexpr auto try_prev(color c) -> std::optional<color> {
+        color prev = lossless_encoder<It>::m_prev_color;
+
+        if (prev.a != c.a || lossless_encoder<It>::m_run_length >= 62) {
+            return std::nullopt;
+        }
+
+        double dist = distance(prev, c);
+
+        if (dist > m_tolerance) {
+            return try_diff(c, dist);
+        }
+
+        return prev;
+    }
+
+    constexpr auto try_hash(color c) -> std::optional<color> {
+        auto const& hash_table = lossless_encoder<It>::m_hash_table;
+
+        std::optional<color> ret = std::nullopt;
+        double best_distance = std::numeric_limits<double>::infinity();
+        for (color candidate : hash_table) {
+            if (candidate.a != c.a || candidate == lossless_encoder<It>::m_prev_color) {
+                continue;
+            }
+
+            double dist = distance(candidate, c);
+            if (dist > best_distance || dist > m_tolerance) {
+                continue;
+            }
+
+            best_distance = dist;
+            ret = candidate;
+        }
+
+        return ret;
     }
 };
 
@@ -143,6 +214,16 @@ template<typename It>
 constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels)
   -> expected::expected<It, std::string_view> {
     encoder::lossless_encoder encoder{out_data};
+    for (color c : in_pixels) {
+        encoder.pixel(c);
+    }
+    return encoder.finish();
+}
+
+template<typename It>
+constexpr auto encode_lossy(It out_data, std::span<const color> in_pixels, double tolerance)
+  -> expected::expected<It, std::string_view> {
+    encoder::tolerant_encoder encoder{out_data, tolerance};
     for (color c : in_pixels) {
         encoder.pixel(c);
     }

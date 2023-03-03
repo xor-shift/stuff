@@ -1,3 +1,9 @@
 [submodule "stuff/thirdparty/googletest"]
 	path = stuff/thirdparty/googletest
 	url = https://github.com/google/googletest
+[submodule "thirdparty/sfml"]
+	path = thirdparty/sfml
+	url = https://github.com/SFML/SFML
+[submodule "stuff/thirdparty/benchmark"]
+	path = stuff/thirdparty/benchmark
+	url = https://github.com/google/benchmark

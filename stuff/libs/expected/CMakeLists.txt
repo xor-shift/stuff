@@ -29,8 +29,8 @@ add_executable(${PROJECT_NAME}_tests
 
 add_compile_options()
 
-add_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
-add_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 
 target_link_libraries(${PROJECT_NAME}_tests ${PROJECT_NAME} gtest gtest_main)
 

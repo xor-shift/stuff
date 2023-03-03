@@ -5,19 +5,23 @@ set(CMAKE_CXX_STANDARD 23)
 
 if (NOT TARGET gtest)
     add_subdirectory(../../thirdparty/googletest ${CMAKE_CURRENT_BINARY_DIR}/thirdparty/googletest EXCLUDE_FROM_ALL)
-endif()
+endif ()
+
+if (NOT TARGET benchmark)
+    add_subdirectory(../../thirdparty/benchmark ${CMAKE_CURRENT_BINARY_DIR}/thirdparty/benchmark EXCLUDE_FROM_ALL)
+endif ()
 
 if (NOT TARGET stuff_core)
     add_subdirectory(../core ${CMAKE_CURRENT_BINARY_DIR}/libs/core)
-endif()
+endif ()
 
 if (NOT TARGET stuff_bit)
     add_subdirectory(../bit ${CMAKE_CURRENT_BINARY_DIR}/libs/bit)
-endif()
+endif ()
 
 if (NOT TARGET stuff_expected)
     add_subdirectory(../expected ${CMAKE_CURRENT_BINARY_DIR}/libs/expected)
-endif()
+endif ()
 
 add_library(${PROJECT_NAME} INTERFACE)
 
@@ -33,10 +37,24 @@ add_executable(${PROJECT_NAME}_tests
         test/qoi.cpp
         )
 
-add_compile_options()
-
-add_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
-add_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
+target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 
 target_link_libraries(${PROJECT_NAME}_tests ${PROJECT_NAME} gtest gtest_main)
 
+### BENCHMARKS
+
+add_executable(${PROJECT_NAME}_bench
+        test/test_images.cpp
+
+        bench/bench.cpp
+        )
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(${PROJECT_NAME}_bench PUBLIC -fsanitize=address -fsanitize=undefined)
+    target_link_options(${PROJECT_NAME}_bench PUBLIC -fsanitize=address -fsanitize=undefined)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(${PROJECT_NAME}_bench PUBLIC -ffast-math -march=native -mtune=native)
+endif()
+
+target_link_libraries(${PROJECT_NAME}_bench ${PROJECT_NAME} benchmark benchmark_main)

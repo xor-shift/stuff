@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 namespace stf {
 
@@ -74,5 +75,11 @@ constexpr bool is_type_complete_v = false;
 
 template<typename T>
 constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
+
+inline void assume(bool pred) {
+    if (!pred) {
+        std::unreachable();
+    }
+}
 
 };  // namespace stf

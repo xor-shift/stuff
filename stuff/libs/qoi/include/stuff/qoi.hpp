@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stuff/core/integers.hpp>
+#include <stuff/core.hpp>
 #include <stuff/expected.hpp>
 
 #include <stuff/qoi/color.hpp>
@@ -58,6 +58,24 @@ struct image {
         create(width, height, color_space);
     }
 
+    constexpr image(image const& other)
+        : m_allocator(other.m_allocator)
+        , m_data(m_allocator.allocate(other.m_width * other.m_height))
+        , m_width(other.m_width)
+        , m_height(other.m_height)
+        , m_color_space(other.m_color_space) {
+        std::copy_n(other.m_data, size(), m_data);
+    }
+
+    constexpr image(image&& other)
+        : m_allocator(other.m_allocator)
+        , m_data(other.m_data)
+        , m_width(other.m_width)
+        , m_height(other.m_height)
+        , m_color_space(other.m_color_space) {
+        other.m_data = nullptr;
+    }
+
     constexpr ~image() { destroy(); }
 
     constexpr bool empty() const { return m_data == nullptr; }
@@ -94,6 +112,9 @@ struct image {
     constexpr auto pixels() -> std::span<color> { return {m_data, m_width * m_height}; }
     constexpr auto pixels() const -> std::span<const color> { return {m_data, m_width * m_height}; }
 
+    constexpr auto at(u32 x, u32 y) -> color& { return m_data[y * m_width + x]; }
+    constexpr auto at(u32 x, u32 y) const -> color { return m_data[y * m_width + x]; }
+
     constexpr auto from_memory(std::span<const u8> data) -> expected::expected<void, std::string_view>;
 
     void from_file(std::string_view filename) { return from_file({std::filesystem::path{filename}}); }
@@ -101,19 +122,19 @@ struct image {
     void from_file(std::ifstream& ifs);
 
     template<typename It>
-    constexpr auto to_memory(It out) const -> expected::expected<It, std::string_view>;
+    constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected::expected<It, std::string_view>;
 
     void to_file(std::string_view filename) const { return to_file({std::filesystem::path{filename}}); }
 
     void to_file(std::ofstream& ifs) const;
 
 private:
+    Allocator m_allocator;
+
     color* m_data = nullptr;
     u32 m_width = 0;
     u32 m_height = 0;
     color_space m_color_space = color_space::srgb_linear_alpha;
-
-    Allocator m_allocator;
 };
 
 }  // namespace stf::qoi

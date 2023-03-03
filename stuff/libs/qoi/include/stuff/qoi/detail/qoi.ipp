@@ -50,8 +50,9 @@ constexpr auto image<Allocator>::from_memory(std::span<const u8> data) -> expect
 
 template<typename Allocator>
 template<typename It>
-constexpr auto image<Allocator>::to_memory(It out) const -> expected::expected<It, std::string_view> {
-    detail::raw_header raw_header {
+constexpr auto image<Allocator>::to_memory(It out, double loss_tolerance) const
+  -> expected::expected<It, std::string_view> {
+    detail::raw_header raw_header{
       .magic = {'q', 'o', 'i', 'f'},
       .width = m_width,
       .height = m_height,
@@ -62,8 +63,14 @@ constexpr auto image<Allocator>::to_memory(It out) const -> expected::expected<I
     raw_header.height = stf::bit::convert_endian(raw_header.height, std::endian::native, std::endian::big);
 
     auto raw_header_data = std::bit_cast<std::array<u8, 16>>(raw_header);
+
     out = std::copy_n(raw_header_data.data(), 14, out);
-    out = TRYX(detail::encode_lossless(out, pixels()));
+
+    if (loss_tolerance == 0)
+        out = TRYX(detail::encode_lossless(out, pixels()));
+    else
+        out = TRYX(detail::encode_lossy(out, pixels(), loss_tolerance));
+
     out = std::fill_n(out, 8, static_cast<u8>(0));
 
     return out;

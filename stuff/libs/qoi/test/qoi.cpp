@@ -52,11 +52,26 @@ TEST(qoi, from_memory) {
 
 #include "./test_images.hpp"
 
+static void output_image(stf::qoi::image<> const& image, std::string_view name) {
+    auto pixels = image.pixels();
+    std::vector<uint8_t> image_data{};
+    image_data.reserve(pixels.size() * 4);
+    for (auto px : pixels) {
+        image_data.push_back(px.r);
+        image_data.push_back(px.g);
+        image_data.push_back(px.b);
+        image_data.push_back(px.a);
+    }
+
+    std::ofstream ofs(std::filesystem::path{name}, std::ios::binary | std::ios::out);
+    std::copy(image_data.begin(), image_data.end(), std::ostream_iterator<uint8_t>(ofs));
+}
+
 static void file_test(
   std::span<const uint8_t> qoi_data,
   std::span<const uint8_t> expected_data,
   std::pair<uint32_t, uint32_t> expected_dims,
-  const char* out_name = nullptr
+  std::string_view out_name = ""
 ) {
     stf::qoi::image image{};
     auto res = image.from_memory(qoi_data);
@@ -71,8 +86,8 @@ static void file_test(
         image_data.push_back(px.a);
     }
 
-    if (out_name != nullptr) {
-        std::ofstream ofs(out_name, std::ios::binary | std::ios::out);
+    if (!out_name.empty()) {
+        std::ofstream ofs(std::filesystem::path{out_name}, std::ios::binary | std::ios::out);
         std::copy(image_data.begin(), image_data.end(), std::ostream_iterator<uint8_t>(ofs));
     }
 
@@ -121,6 +136,7 @@ static void round_trip_test(std::span<const uint8_t> qoi_data) {
 
 TEST(qoi, round_trip) {
     using namespace stf::qoi::test_images;
+
     round_trip_test(simple_image);
     round_trip_test(dice_qoi);
     round_trip_test(edgecase_qoi);
@@ -130,4 +146,40 @@ TEST(qoi, round_trip) {
     round_trip_test(testcard_qoi);
     round_trip_test(testcard_rgba_qoi);
     round_trip_test(wikipedia_008_qoi);
+}
+
+static void loss_test(std::string_view name, std::span<const uint8_t> qoi_data, double tolerance) {
+    stf::qoi::image image{};
+    auto res = image.from_memory(qoi_data);
+    ASSERT_TRUE(res);
+
+    std::vector<uint8_t> re_encode{};
+    ASSERT_TRUE(image.to_memory(back_inserter(re_encode), tolerance));
+
+    double ratio = static_cast<double>(re_encode.size()) / static_cast<double>(qoi_data.size());
+
+    std::cout << name << ": "
+              << "orig=" << qoi_data.size() << ", lossy=" << re_encode.size() << ", ratio=" << ratio << std::endl;
+
+    stf::qoi::image decode{};
+    res = decode.from_memory(re_encode);
+    ASSERT_TRUE(res);
+
+    output_image(decode, std::string(name) + "_lossy.data");
+}
+
+TEST(qoi, reencode_lossy) {
+    using namespace stf::qoi::test_images;
+
+    double tolerance = 3;
+
+    loss_test("simple_image", simple_image, tolerance);
+    loss_test("dice_qoi", dice_qoi, tolerance);
+    loss_test("edgecase_qoi", edgecase_qoi, tolerance);
+    loss_test("kodim10_qoi", kodim10_qoi, tolerance);
+    loss_test("kodim23_qoi", kodim23_qoi, tolerance);
+    loss_test("qoi_logo_qoi", qoi_logo_qoi, tolerance);
+    loss_test("testcard_qoi", testcard_qoi, tolerance);
+    loss_test("testcard_rgba_qoi", testcard_rgba_qoi, tolerance);
+    loss_test("wikipedia_008_qoi", wikipedia_008_qoi, tolerance);
 }

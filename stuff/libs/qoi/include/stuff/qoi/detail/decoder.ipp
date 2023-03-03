@@ -85,15 +85,24 @@ private:
 
     std::array<color, 64> m_hash_table;
     color m_prev{0, 0, 0, 255};
+    u8 m_prev_hash = color{0, 0, 0, 255}.hash();
 
-    template<bool SetPrev, bool SetIndex>
-    constexpr void emit(color c, usize ct = 1) {
+    template<bool SetPrev, bool SetIndex, bool PreHashed = false>
+    constexpr void emit(color c, usize ct = 1, u8 pre_hash = 0) {
+        u8 c_hash;
+        if constexpr (PreHashed || (!SetPrev && !SetIndex)) {
+            c_hash = pre_hash;
+        } else {
+            c_hash = c.hash();
+        }
+
         if constexpr (SetPrev) {
             m_prev = c;
+            m_prev_hash = c_hash;
         }
 
         if constexpr (SetIndex) {
-            m_hash_table[c.hash()] = c;
+            m_hash_table[c_hash % 64] = c;
         }
 
         std::fill_n(m_out_pixels.data(), ct, c);
@@ -109,15 +118,28 @@ private:
                 consumed = 1;
                 break;
 
-            case qoi_op::diff:
-                emit<true, true>(m_prev.diff((leading >> 4) & 3, (leading >> 2) & 3, leading & 3));
-                consumed = 1;
-                break;
+            case qoi_op::diff: {
+                auto dr = (leading >> 4) & 3;
+                auto dg = (leading >> 2) & 3;
+                auto db = (leading >> 0) & 3;
 
-            case qoi_op::luma:
-                emit<true, true>(m_prev.luma(leading & 0x3F, m_in_data[1] >> 4, m_in_data[1] & 0xF));
+                auto delta = color::hash_delta(leading & 0x3F);
+
+                emit<true, true, false>(m_prev.diff(dr, dg, db), 1, m_prev_hash + delta);
+
+                consumed = 1;
+            } break;
+
+            case qoi_op::luma: {
+                auto dg = leading & 0x3F;
+                auto drdg = m_in_data[1] >> 4;
+                auto dbdg = m_in_data[1] & 0xF;
+
+                auto delta = color::hash_luma(leading & 0x3F, m_in_data[1]);
+
+                emit<true, true, false>(m_prev.luma(dg, drdg, dbdg), 1, m_prev_hash + delta);
                 consumed = 2;
-                break;
+            } break;
 
             case qoi_op::run:
                 emit<false, true>(m_prev, (leading & 0x3F) + 1);
