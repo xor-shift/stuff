@@ -63,9 +63,12 @@ public:
     : m_value()
     , m_has_value(true) {}
 
+    constexpr expected(expected const&) = default;
+
     constexpr expected(expected const& other)
         noexcept(std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_constructible_v<E>)
-        requires std::is_copy_constructible_v<T> && std::is_copy_constructible_v<E>
+        requires std::is_copy_constructible_v<T> && std::is_copy_constructible_v<E> &&
+                 (!std::is_trivially_copy_constructible_v<T> || !std::is_trivially_copy_constructible_v<E>)
     : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), other.m_value);
@@ -74,9 +77,12 @@ public:
         }
     }
 
+    constexpr expected(expected&& other) = default;
+
     constexpr expected(expected&& other)
         noexcept(std::is_nothrow_move_constructible_v<T>&& std::is_nothrow_move_constructible_v<E>)
-        requires std::is_move_constructible_v<T> && std::is_move_constructible_v<E>
+        requires std::is_move_constructible_v<T> && std::is_move_constructible_v<E> &&
+                 (!std::is_trivially_move_constructible_v<T> || !std::is_trivially_move_constructible_v<E>)
     : m_has_value(other.m_has_value) {
         if (m_has_value) {
             std::construct_at(std::addressof(m_value), std::move(other).m_value);
@@ -174,9 +180,12 @@ public:
     : m_unexpected(il, std::forward<Args>(args)...)
     , m_has_value(false) {}
 
-    // clang-format on
+    // FIXME: this should be fixed by clang 16 (?)
+    // constexpr ~expected() = default;
 
-    constexpr ~expected() {
+    constexpr ~expected()
+        //requires (!std::is_trivially_destructible_v<T>) || (!std::is_trivially_destructible_v<E>)
+    {
         if (m_has_value) {
             std::destroy_at(std::addressof(m_value));
         } else {
@@ -191,8 +200,6 @@ public:
             std::fill(std::begin(m_fill_e), std::end(m_fill_e), '\0');
         }
     }
-
-    // clang-format off
 
     constexpr expected& operator=(expected const& other)
         noexcept(
@@ -489,24 +496,17 @@ public:
     template<typename U>
     using rebind = expected<U, E>;
 
-    /* UNCOMMENT AFTER CLANG >= 16
-     * also add requirements that E is not trivially `verb`-able in the corresponding nontrivial functions
-     *
-     * expected(const expected&) = default;
-     * expected(expected&&) = default;
-     * constexpr ~expected() = default;
-     *
-     */
-
     constexpr expected() noexcept
         : m_value()
         , m_has_value(true) {}
 
     // clang-format off
 
+    constexpr expected(expected const& other) = default;
+
     constexpr expected(expected const& other)
         noexcept(std::is_nothrow_copy_constructible_v<E>)
-        requires std::is_copy_constructible_v<E>
+        requires std::is_copy_constructible_v<E> && (!std::is_trivially_copy_constructible_v<E>)
     : m_value()
     , m_has_value(other.m_has_value) {
         if (!m_has_value) {
@@ -515,9 +515,11 @@ public:
         // else, m_value is initialised
     }
 
+    constexpr expected(expected&& other) = default;
+
     constexpr expected(expected&& other)
         noexcept(std::is_nothrow_move_constructible_v<E>)
-        requires std::is_move_constructible_v<E>
+        requires std::is_move_constructible_v<E> && (!std::is_trivially_move_constructible_v<E>)
     : m_value()
     , m_has_value(other.m_has_value) {
         if (!m_has_value) {
@@ -585,7 +587,13 @@ public:
     : m_value()
     , m_has_value(true) {}
 
-    constexpr ~expected() noexcept(std::is_nothrow_destructible_v<E>) {
+    // FIXME: read the fixme above for non-void T specialized `expected`
+    // constexpr ~expected() = default;
+
+    constexpr ~expected()
+        noexcept(std::is_nothrow_destructible_v<E>)
+        //requires (!std::is_trivially_destructible_v<E>)
+    {
         if (!m_has_value) {
             std::destroy_at(std::addressof(m_unexpected));
         }

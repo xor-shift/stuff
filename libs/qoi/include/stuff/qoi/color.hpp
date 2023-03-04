@@ -52,8 +52,6 @@ static constexpr std::array<int, 64> diff_hash_delta_table = ([] {
 })();
 
 static constexpr std::array<int, 256 * 64> luma_hash_delta_table = ([] {
-    // notice that the hash function is linear
-
     std::array<int, 256 * 64> ret;
 
     for (int i = 0; i < 256 * 64; i++) {
@@ -81,7 +79,7 @@ struct color {
         return bit::convert_endian(v, std::endian::native, std::endian::big);
     }
 
-    constexpr auto hash_slow() const -> u8 { return (r * 3 + g * 5 + b * 7 + a * 11) % 64; }
+    constexpr auto hash_slow() const -> u8 { return r * 3 + g * 5 + b * 7 + a * 11; }
 
     constexpr auto hash_lookup() const -> u8 {
         u32 t = std::bit_cast<u32>(*this);

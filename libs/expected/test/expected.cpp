@@ -61,6 +61,16 @@ TEST(expected, expected) {
     ASSERT_NO_THROW(exp_0.value());
     ASSERT_EQ(*exp_0, 0);
 
+    expected<int, float> exp_0_copy{exp_0};
+    ASSERT_TRUE(exp_0_copy.has_value());
+    ASSERT_NO_THROW(exp_0_copy.value());
+    ASSERT_EQ(*exp_0_copy, 0);
+
+    expected<int, float> exp_0_move{exp_0};
+    ASSERT_TRUE(exp_0_move.has_value());
+    ASSERT_NO_THROW(exp_0_move.value());
+    ASSERT_EQ(*exp_0_move, 0);
+
     expected<nontrivial<nontrivial_settings{false, false}>, float> exp_1{};
     ASSERT_FALSE(noexcept(decltype(exp_1){}));
     ASSERT_TRUE(exp_1.has_value());
