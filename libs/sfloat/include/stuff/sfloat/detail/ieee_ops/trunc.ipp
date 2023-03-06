@@ -3,14 +3,14 @@
 namespace stf::sfloat::ieee {
 
 template<concepts::ieee_float_description Desc>
-constexpr auto trunc(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto trunc(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     using signed_type = std::make_signed_t<typename Desc::repr_type>;
     using unsigned_type = typename Desc::repr_type;
 
     signed_type real_exponent = v.real_exponent();
 
     if (real_exponent == static_cast<signed_type>(v.fraction_mask / 2)) {  // inf or nan
-        return add(v, v, std::move(env));                                             // raise exceptions
+        return add(v, v, env);                                             // raise exceptions
     }
 
     if (real_exponent >= static_cast<signed_type>(v.fraction_bits)) {  // definitely an integer
@@ -41,14 +41,19 @@ constexpr auto trunc(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto inverse_trunc(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto trunc(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(trunc, v);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto inverse_trunc(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     using signed_type = std::make_signed_t<typename Desc::repr_type>;
     using unsigned_type = typename Desc::repr_type;
 
     signed_type real_exponent = v.real_exponent();
 
     if (real_exponent == static_cast<signed_type>(v.fraction_mask / 2)) {  // inf or nan
-        return add(v, v, std::move(env));                                  // raise exceptions
+        return add(v, v, env);                                             // raise exceptions
     }
 
     if (real_exponent >= static_cast<signed_type>(v.fraction_bits)) {  // definitely an integer
@@ -78,13 +83,28 @@ constexpr auto inverse_trunc(soft_float<Desc> v, fenv&& env = fenv()) -> soft_fl
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto ceil(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
-    return v.sign_bit() ? trunc(v, std::move(env)) : inverse_trunc(v, std::move(env));
+constexpr auto inverse_trunc(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(inverse_trunc, v);
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto floor(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
-    return v.sign_bit() ? inverse_trunc(v, std::move(env)) : trunc(v, std::move(env));
+constexpr auto ceil(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
+    return v.sign_bit() ? trunc(v, env) : inverse_trunc(v, env);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto ceil(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(ceil, v);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto floor(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
+    return v.sign_bit() ? inverse_trunc(v, env) : trunc(v, env);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto floor(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(floor, v);
 }
 
 }  // namespace stf::sfloat::ieee

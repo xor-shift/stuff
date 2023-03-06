@@ -13,11 +13,13 @@ enum class rounding : int {
 };
 
 enum class exception : int {
+    none = 0,
     div_by_zero = FE_DIVBYZERO,
     inexact = FE_INEXACT,
     invalid = FE_INVALID,
     overflow = FE_OVERFLOW,
     underflow = FE_UNDERFLOW,
+    all = FE_ALL_EXCEPT,
 };
 
 struct fenv {

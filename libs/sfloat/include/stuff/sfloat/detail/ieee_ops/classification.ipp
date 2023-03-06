@@ -75,4 +75,14 @@ constexpr auto order(soft_float<Desc> lhs, soft_float<Desc> rhs) -> std::partial
     return invert ? rhs.repr <=> lhs.repr : lhs.repr <=> rhs.repr;
 }
 
+template<concepts::ieee_float_description Desc>
+constexpr auto operator<=>(soft_float<Desc> lhs, soft_float<Desc> rhs) -> std::partial_ordering {
+    return order(lhs, rhs);
 }
+
+template<concepts::ieee_float_description Desc>
+constexpr auto operator==(soft_float<Desc> lhs, soft_float<Desc> rhs) -> bool {
+    return (lhs <=> rhs) == std::partial_ordering::equivalent;
+}
+
+}  // namespace stf::sfloat::ieee

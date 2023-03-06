@@ -12,8 +12,13 @@ constexpr auto copysign(soft_float<Desc> mag, soft_float<Desc> sgn) -> soft_floa
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto scalbn(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto scalbn(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
+    return v; // TODO: stub
+}
 
+template<concepts::ieee_float_description Desc>
+constexpr auto scalbn(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(scalbn, v);
 }
 
 }

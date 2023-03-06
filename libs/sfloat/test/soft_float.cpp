@@ -154,3 +154,42 @@ static void test_soft_float_rounding(std::span<const test_entry<Repr>> tests) {
 TEST(sfloat, rounding) {
     test_soft_float_rounding<stf::sfloat::native_float_t<float>>(get_sp_test_entries());
 }
+
+TEST(sfloat, nextafter) {
+    using stf::sfloat::exception;
+    using stf::sfloat::make_soft;
+    using stf::sfloat::ieee::nextafter;
+    using float_type = stf::sfloat::native_float_t<float>;
+    using U = typename float_type::repr_type;
+
+    constexpr U min_subnormal = 1;
+    constexpr U neg_min_subnormal = static_cast<U>(1) << (float_type::exponent_bits + float_type::mantissa_bits) | 1;
+
+    stf::sfloat::fenv env {};
+
+    ASSERT_EQ(nextafter(make_soft(0.f), make_soft(1.f), env).repr, min_subnormal);
+    ASSERT_TRUE(env.test_except(exception::inexact));
+    ASSERT_TRUE(env.test_except(exception::underflow));
+    env.clear_except(exception::inexact);
+    env.clear_except(exception::underflow);
+    ASSERT_FALSE(env.test_except(exception::all));
+
+    ASSERT_EQ(nextafter(make_soft(0.f), make_soft(-1.f), env).repr, neg_min_subnormal);
+    ASSERT_TRUE(env.test_except(exception::inexact));
+    ASSERT_TRUE(env.test_except(exception::underflow));
+    env.clear_except(exception::inexact);
+    env.clear_except(exception::underflow);
+    ASSERT_FALSE(env.test_except(exception::all));
+
+    ASSERT_EQ(nextafter(make_soft(1.f), make_soft(2.f), env), make_soft(1.00000011921f));
+    ASSERT_FALSE(env.test_except(exception::all));
+
+    ASSERT_EQ(nextafter(make_soft(1.f), make_soft(-2.f), env), make_soft(0.999999940395f));
+    ASSERT_FALSE(env.test_except(exception::all));
+
+    ASSERT_EQ(nextafter(make_soft(1.f), make_soft(2.f), env).repr, 0x3f800001);
+    ASSERT_FALSE(env.test_except(exception::all));
+
+    ASSERT_EQ(nextafter(make_soft(1.f), make_soft(-2.f), env).repr, 0x3f7fffff);
+    ASSERT_FALSE(env.test_except(exception::all));
+}

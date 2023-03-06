@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stuff/bit.hpp>
+#include <stuff/core.hpp>
 #include <stuff/sfloat/env.hpp>
 
 #include <concepts>
@@ -25,7 +26,13 @@ struct soft_float {
     inline static constexpr repr_type shifted_exponent_mask = exponent_mask << mantissa_bits;
 
     constexpr soft_float() = default;
-    constexpr soft_float(repr_type v) : repr(v) {}
+    constexpr soft_float(repr_type v)
+        : repr(v) {}
+
+    constexpr soft_float(soft_float const& other) = default;
+    constexpr soft_float(soft_float&& other) = default;
+
+    static constexpr auto huge_val() -> soft_float { return {shifted_exponent_mask}; }
 
     constexpr auto get_repr() const -> repr_type { return repr; }
 
@@ -65,6 +72,12 @@ struct soft_float {
 
 }  // namespace stf::sfloat::ieee
 
+#define STF_SFLOAT_ENVLESS_CALL(_fn, ...) \
+    ({                                    \
+        fenv env{};                       \
+        _fn(__VA_ARGS__, env);            \
+    })
+
 #include <stuff/sfloat/detail/ieee_ops/classification.ipp>
 
 #include <stuff/sfloat/detail/ieee_ops/arith.ipp>
@@ -72,5 +85,6 @@ struct soft_float {
 
 #include <stuff/sfloat/detail/ieee_ops/basic.ipp>
 #include <stuff/sfloat/detail/ieee_ops/manipulation.ipp>
+#include <stuff/sfloat/detail/ieee_ops/nextafter.ipp>
 #include <stuff/sfloat/detail/ieee_ops/round.ipp>
 #include <stuff/sfloat/detail/ieee_ops/trunc.ipp>

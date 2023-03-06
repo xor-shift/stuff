@@ -3,14 +3,14 @@
 namespace stf::sfloat::ieee {
 
 template<concepts::ieee_float_description Desc>
-constexpr auto round(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto round(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     using signed_type = std::make_signed_t<typename Desc::repr_type>;
     using unsigned_type = typename Desc::repr_type;
 
     signed_type real_exponent = v.real_exponent();
 
     if (real_exponent == static_cast<signed_type>(v.fraction_mask / 2)) {  // inf or nan
-        return add(v, v, std::move(env));                                  // raise exceptions
+        return add(v, v, env);                                  // raise exceptions
     }
 
     if (real_exponent >= static_cast<signed_type>(v.fraction_bits)) {  // definitely an integer
@@ -39,31 +39,46 @@ constexpr auto round(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto round_even(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto round(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(round_even, v);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto round_even(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     // stub
 
     return v;
 }
 
 template<concepts::ieee_float_description Desc>
-constexpr auto rint(soft_float<Desc> v, fenv&& env = fenv()) -> soft_float<Desc> {
+constexpr auto round_even(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(round_even, v);
+}
+
+template<concepts::ieee_float_description Desc>
+constexpr auto rint(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     switch (env.rounding_mode) {
-        case rounding::downward: return floor(v, std::move(env));
-        case rounding::upward: return ceil(v, std::move(env));
-        case rounding::to_nearest: return round_even(v, std::move(env));
-        case rounding::toward_zero: return trunc(v, std::move(env));
+        case rounding::downward: return floor(v, env);
+        case rounding::upward: return ceil(v, env);
+        case rounding::to_nearest: return round_even(v, env);
+        case rounding::toward_zero: return trunc(v, env);
         default: std::unreachable();
     }
 }
 
+template<concepts::ieee_float_description Desc>
+constexpr auto rint(soft_float<Desc> v) -> soft_float<Desc> {
+    return STF_SFLOAT_ENVLESS_CALL(rint, v);
+}
+
 template<std::signed_integral T, concepts::ieee_float_description Desc>
-constexpr auto lrint(soft_float<Desc> v, fenv&& env = fenv()) -> T {
+constexpr auto lrint(soft_float<Desc> v, fenv& env) -> T {
     if (is_infinite(v) || is_nan(v)) {
         env.raise_except(exception::invalid);
         return (v.sign_bit() ? std::numeric_limits<T>::min : std::numeric_limits<T>::max)();
     }
 
-    soft_float<Desc> res = rint(v, std::move(env));
+    soft_float<Desc> res = rint(v, env);
 
     std::signed_integral auto exponent = res.real_exponent();
     // the integer result is in [2^e,  2^(e+1))
@@ -85,6 +100,14 @@ constexpr auto lrint(soft_float<Desc> v, fenv&& env = fenv()) -> T {
     // e is at most 62 now
 
     T base = T{1} << exponent;
+
+    // WIP
+    std::unreachable();
+}
+
+template<std::signed_integral T, concepts::ieee_float_description Desc>
+constexpr auto lrint(soft_float<Desc> v) -> T {
+    return STF_SFLOAT_ENVLESS_CALL(lrint<T>, v);
 }
 
 }  // namespace stf::sfloat::ieee
