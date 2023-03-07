@@ -1,5 +1,1 @@
-cmake-build-*
-thirdpart
-**/cmake-build-*
-**/thirdparty
-.idea
+/thirdparty
