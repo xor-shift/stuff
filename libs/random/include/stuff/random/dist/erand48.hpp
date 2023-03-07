@@ -14,7 +14,7 @@ struct erand48_distribution {
     struct parameters {
         bool include_zero = true;
 
-        friend constexpr auto operator==(parameters const& lhs, parameters const& rhs) {
+        friend constexpr auto operator==(parameters const& lhs, parameters const& rhs) -> bool {
             return lhs.include_zero == rhs.include_zero;
         }
     };

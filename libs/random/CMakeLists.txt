@@ -36,6 +36,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE stuff_core stuff_bit stuff_expec
 ### TESTS
 
 add_executable(${PROJECT_NAME}_tests
+        test/normal.cpp
         test/random.cpp
         )
 

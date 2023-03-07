@@ -4,6 +4,7 @@
 #include <stuff/random/util.hpp>
 
 #include <stuff/random/dist/erand48.hpp>
+#include <stuff/random/dist/normal.hpp>
 #include <stuff/random/engine/splitmix.hpp>
 #include <stuff/random/engine/xoroshiro128.hpp>
 #include <stuff/random/engine/xoshiro256.hpp>
@@ -22,5 +23,15 @@ using erand_float_generator = std::minstd_rand;
 
 using xoshiro_float_generator = std::conditional_t<std::is_same_v<ufast32, u64>, xoshiro_256p, xoroshiro_128p>;
 using xoshiro_double_generator = xoshiro_256p;
+
+template<concepts::random_number_engine E = xoshiro_float_generator>
+constexpr auto get_float(E& e, bool include_zero = true) -> float {
+    return erand48_distribution<float>{{include_zero}}(e);
+}
+
+template<concepts::random_number_engine E = xoshiro_float_generator>
+constexpr auto get_double(E& e, bool include_zero = true) -> float {
+    return erand48_distribution<double>{{include_zero}}(e);
+}
 
 }  // namespace stf::random

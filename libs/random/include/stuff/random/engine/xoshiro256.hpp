@@ -12,7 +12,9 @@ namespace detail {
 struct xoshiro256_base {
     using result_type = u64;
 
-    constexpr xoshiro256_base() = default;
+    constexpr xoshiro256_base()
+        : xoshiro256_base(0xDEADBEEFCAFEBABEull) {}
+
     constexpr xoshiro256_base(xoshiro256_base const&) = default;
     constexpr xoshiro256_base(xoshiro256_base&&) = default;
 

@@ -198,8 +198,8 @@ TEST(random, xoroshiro_128pp) {
         const uint64_t result = std::rotl(s0 + s1, 17) + s0;
 
         s1 ^= s0;
-        s[0] = std::rotl(s0, 49) ^ s1 ^ (s1 << 21); // a, b
-        s[1] = std::rotl(s1, 28); // c
+        s[0] = std::rotl(s0, 49) ^ s1 ^ (s1 << 21);  // a, b
+        s[1] = std::rotl(s1, 28);                    // c
 
         return result;
     };
@@ -214,10 +214,11 @@ TEST(random, xoroshiro_128ss) {
         const uint64_t result = std::rotl(s0 * 5, 7) * 9;
 
         s1 ^= s0;
-        s[0] = std::rotl(s0, 24) ^ s1 ^ (s1 << 16); // a, b
-        s[1] = std::rotl(s1, 37); // c
+        s[0] = std::rotl(s0, 24) ^ s1 ^ (s1 << 16);  // a, b
+        s[1] = std::rotl(s1, 37);                    // c
 
         return result;
     };
 
-    test_xoroshiro<stf::random::xoroshiro_128ss>(next);}
+    test_xoroshiro<stf::random::xoroshiro_128ss>(next);
+}
