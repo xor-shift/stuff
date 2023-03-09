@@ -192,23 +192,23 @@ template<std::floating_point T, typename Gen>
 constexpr auto sphere_sampler<2>::rejection_cook(Gen& gen) -> blas::vector<T, 3> {
     erand48_distribution<T> dist{};
 
-    T s;
-    T t;
-    T u;
-    T v;
+    T x_0;
+    T x_1;
+    T x_2;
+    T x_3;
     T r2;
 
     do {
-        s = 2 * dist(gen) - 1;
-        t = 2 * dist(gen) - 1;
-        u = 2 * dist(gen) - 1;
-        v = 2 * dist(gen) - 1;
-        r2 = s * s + t * t + u * u + v * v;
-    } while (r2 > 1 || r2 == 0);
+        x_0 = 2 * dist(gen) - 1;
+        x_1 = 2 * dist(gen) - 1;
+        x_2 = 2 * dist(gen) - 1;
+        x_3 = 2 * dist(gen) - 1;
+        r2 = x_0 * x_0 + x_1 * x_1 + x_2 * x_2 + x_3 * x_3;
+    } while (r2 >= 1 || r2 == 0);
 
-    T x = 2 * (s * u + t * v) / r2;
-    T y = 2 * (u * v - s * t) / r2;
-    T z = (s * s - t * t + u * u - v * v) / r2;
+    T x = 2 * (x_1 * x_3 + x_0 * x_2) / r2;
+    T y = 2 * (x_2 * x_3 - x_0 * x_1) / r2;
+    T z = (x_0 * x_0 + x_3 * x_3 - x_1 * x_1 - x_2 * x_2) / r2;
 
     return {x, y, z};
 }

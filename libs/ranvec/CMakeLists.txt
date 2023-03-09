@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(stuff_randvec LANGUAGES CXX)
+project(stuff_ranvec LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 
 if (NOT TARGET gtest)
