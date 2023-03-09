@@ -31,6 +31,7 @@ struct fenv {
     constexpr void clear_except(exception e) { exceptions &= ~static_cast<int>(e); }
 
     void inject_to_std_fenv() {
+#ifndef __FAST_MATH__
 #pragma STDC FENV_ACCESS ON
         std::fesetround(static_cast<int>(rounding_mode));
 
@@ -43,9 +44,11 @@ struct fenv {
         UPDATE_EXCEPT(exception::underflow);
 #undef UPDATE_EXCEPT
 #pragma pop_macro("UPDATE_EXCEPT")
+#endif
     }
 
     void gather_from_std_fenv() {
+#ifndef __FAST_MATH__
 #pragma STDC FENV_ACCESS ON
         exceptions = std::fegetround();
 
@@ -59,6 +62,7 @@ struct fenv {
         UPDATE_EXCEPT(exception::underflow);
 #undef UPDATE_EXCEPT
 #pragma pop_macro("UPDATE_EXCEPT")
+#endif
     }
 
     template<typename Func>
