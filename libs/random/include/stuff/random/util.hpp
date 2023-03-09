@@ -29,9 +29,16 @@ constexpr auto get_entropy(G& generator, int bits) -> T {
     constexpr int bits_per_call = std::min(generator_bits_per_call<G>(), std::numeric_limits<T>::digits);
     constexpr U mask = bits_per_call == std::numeric_limits<T>::digits ? static_cast<U>(static_cast<T>(-1))
                                                                        : ((static_cast<U>(1) << bits_per_call) - 1);
+
+
     assume(bits <= std::numeric_limits<T>::digits);
     assume(bits_per_call <= std::numeric_limits<T>::digits);
     assume(bits_per_call <= std::numeric_limits<U>::digits);
+
+    if (bits_per_call >= std::numeric_limits<T>::digits) { // supress a warning
+        U gen = generator() >> (bits_per_call - bits);
+        return static_cast<T>(gen);
+    }
 
     int num_calls = bits / bits_per_call;
     bool have_excess = (bits % bits_per_call) != 0;

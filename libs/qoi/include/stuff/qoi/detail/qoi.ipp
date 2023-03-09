@@ -71,7 +71,8 @@ constexpr auto image<Allocator>::to_memory(It out, double loss_tolerance) const
     else
         out = TRYX(detail::encode_lossy(out, pixels(), loss_tolerance));
 
-    out = std::fill_n(out, 8, static_cast<u8>(0));
+    out = std::fill_n(out, 7, u8(0));
+    *out++ = u8(1);
 
     return out;
 }

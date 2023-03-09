@@ -64,7 +64,16 @@ template<concepts::vector T, concepts::vector U>
 constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
 
 template<concepts::vector T>
-constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto;
+constexpr auto operator/(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto;
+
+template<concepts::vector T>
+constexpr auto operator*(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto;
+
+template<concepts::vector T>
+constexpr auto abs(T const& v) -> typename T::value_type;
+
+template<concepts::vector T>
+constexpr auto normalize(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto;
 
 /// @return
 /// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n

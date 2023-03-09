@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <span>
 
@@ -124,9 +125,12 @@ struct image {
     template<typename It>
     constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected::expected<It, std::string_view>;
 
-    void to_file(std::string_view filename) const { return to_file({std::filesystem::path{filename}}); }
+    void to_file(std::string_view filename) const {
+        std::ofstream ofs(std::filesystem::path{filename});
+        return to_file(ofs);
+    }
 
-    void to_file(std::ofstream& ifs) const;
+    void to_file(std::ofstream& ofs) const { to_memory(std::ostreambuf_iterator<char>(ofs)); }
 
 private:
     Allocator m_allocator;

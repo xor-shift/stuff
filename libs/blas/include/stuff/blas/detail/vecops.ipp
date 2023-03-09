@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <functional>
 #include <limits>
 
@@ -8,7 +9,8 @@ namespace stf::blas {
 // return type is based on promotion rules
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto dot(T const& lhs, U const& rhs) -> core::type_promotion_t<typename T::value_type, typename U::value_type> {
+constexpr auto dot(T const& lhs, U const& rhs)
+  -> core::type_promotion_t<typename T::value_type, typename U::value_type> {
     auto ret = lhs[0] * rhs[0];
 
     for (usize i = 1; i < T::size; i++) {
@@ -77,6 +79,19 @@ constexpr auto elementwise_fn(T const& lhs, U const& rhs, Fn&& functor = {}) {
     return ret;
 }
 
+template<concepts::vector T, typename U, typename Fn>
+    requires std::is_arithmetic_v<U>
+constexpr auto elementwise_fn(T const& lhs, U rhs, Fn&& functor = {}) {
+    using ret_value_type = core::type_promotion_t<typename T::value_type, U>;
+    concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::invoke(functor, lhs[i], rhs);
+    }
+
+    return ret;
+}
+
 }  // namespace detail
 
 template<concepts::vector T, concepts::vector U>
@@ -102,6 +117,16 @@ constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::s
 }
 
 template<concepts::vector T>
+constexpr auto operator/(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto{
+    return detail::elementwise_fn(lhs, rhs, std::divides<>{});
+}
+
+template<concepts::vector T>
+constexpr auto operator*(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto{
+    return detail::elementwise_fn(lhs, rhs, std::multiplies<>{});
+}
+
+/*template<concepts::vector T>
 constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto {
     using ret_type = typename T::template rebind<typename T::value_type>;
     concepts::nd_vector_of_t<typename T::value_type, T::size> auto ret = ret_type{};
@@ -111,6 +136,24 @@ constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_typ
     }
 
     return ret;
+}*/
+
+template<concepts::vector T>
+constexpr auto abs(T const& v) -> typename T::value_type {
+    using U = typename T::value_type;
+    U sum = 0;
+
+    for (usize i = 0; i < T::size; i++) {
+        U t = v[i];
+        sum += t * t;
+    }
+
+    return std::sqrt(sum);
+}
+
+template<concepts::vector T>
+constexpr auto normalize(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto{
+    return v / abs(v);
 }
 
 template<concepts::vector T, concepts::vector U>
