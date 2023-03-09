@@ -44,7 +44,7 @@ struct ball_sampler<3> {
     static constexpr auto radius(Gen& gen) -> blas::vector<T, 3>;
 
     template<std::floating_point T, typename Gen>
-    static constexpr auto sample(Gen& gen) -> blas::vector<T, 3> { return rejection<T>(gen); }
+    static constexpr auto sample(Gen& gen) -> blas::vector<T, 3> { return radius<T>(gen); }
 };
 
 template<>
@@ -59,7 +59,7 @@ struct sphere_sampler<1> {
     static constexpr auto normal(Gen& gen) -> blas::vector<T, 2>;
 
     template<std::floating_point T, typename Gen>
-    static constexpr auto sample(Gen& gen) -> blas::vector<T, 2> { return polar<T>(gen); }
+    static constexpr auto sample(Gen& gen) -> blas::vector<T, 2> { return rejection<T>(gen); }
 };
 
 template<>
@@ -80,7 +80,7 @@ struct sphere_sampler<2> {
     static constexpr auto rejection_cook(Gen& gen) -> blas::vector<T, 3>;
 
     template<std::floating_point T, typename Gen>
-    static constexpr auto sample(Gen& gen) -> blas::vector<T, 3> { return polar<T>(gen); }
+    static constexpr auto sample(Gen& gen) -> blas::vector<T, 3> { return rejection_marsaglia<T>(gen); }
 };
 
 }  // namespace stf::random

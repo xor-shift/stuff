@@ -40,3 +40,19 @@ target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsaniti
 target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fsanitize=undefined)
 
 target_link_libraries(${PROJECT_NAME}_tests ${PROJECT_NAME} gtest gtest_main stuff_qoi)
+
+### BENCHMARKS
+
+add_executable(${PROJECT_NAME}_bench
+        bench/bench.cpp
+        )
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(${PROJECT_NAME}_bench PUBLIC -fsanitize=address -fsanitize=undefined)
+    target_link_options(${PROJECT_NAME}_bench PUBLIC -fsanitize=address -fsanitize=undefined)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(${PROJECT_NAME}_bench PUBLIC -ffast-math -march=native -mtune=native)
+endif()
+
+target_link_libraries(${PROJECT_NAME}_bench ${PROJECT_NAME} benchmark benchmark_main)
+
