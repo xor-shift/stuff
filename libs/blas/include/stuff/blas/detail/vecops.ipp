@@ -6,7 +6,6 @@
 
 namespace stf::blas {
 
-// return type is based on promotion rules
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
 constexpr auto dot(T const& lhs, U const& rhs)
@@ -61,44 +60,6 @@ constexpr auto cross(T const& x, U const& y) -> concepts::nd_vector<7> auto{
     return ret;
 }
 
-namespace detail {
-
-template<concepts::vector T, concepts::vector U, typename Fn>
-    requires(T::size == U::size)
-constexpr auto elementwise_fn(T const& lhs, U const& rhs, Fn&& functor = {}) {
-    // TODO: implement expression templates, maybe
-    // real to-do: benchmark expression templates versus straightforward operations
-
-    using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type>;
-    concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
-
-    for (usize i = 0; i < T::size; i++) {
-        ret[i] = std::invoke(functor, lhs[i], rhs[i]);
-    }
-
-    return ret;
-}
-
-template<concepts::vector T, typename U, typename Fn>
-    requires std::is_arithmetic_v<U>
-constexpr auto elementwise_fn(T const& lhs, U rhs, Fn&& functor = {}) {
-    using ret_value_type = core::type_promotion_t<typename T::value_type, U>;
-    concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
-
-    for (usize i = 0; i < T::size; i++) {
-        ret[i] = std::invoke(functor, lhs[i], rhs);
-    }
-
-    return ret;
-}
-
-}  // namespace detail
-
-template<concepts::vector T, concepts::vector U>
-constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
-    return detail::elementwise_fn(lhs, rhs, std::plus<>{});
-}
-
 template<concepts::vector T>
 constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto{
     using ret_type = typename T::template rebind<typename T::value_type>;
@@ -109,21 +70,6 @@ constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::val
     }
 
     return ret;
-}
-
-template<concepts::vector T, concepts::vector U>
-constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
-    return detail::elementwise_fn(lhs, rhs, std::minus<>{});
-}
-
-template<concepts::vector T>
-constexpr auto operator/(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto{
-    return detail::elementwise_fn(lhs, rhs, std::divides<>{});
-}
-
-template<concepts::vector T>
-constexpr auto operator*(T const& lhs, typename T::value_type rhs) -> concepts::nd_vector<T::size> auto{
-    return detail::elementwise_fn(lhs, rhs, std::multiplies<>{});
 }
 
 /*template<concepts::vector T>
@@ -157,6 +103,69 @@ constexpr auto normalize(T const& v) -> concepts::nd_vector_of_t<typename T::val
 }
 
 template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
+constexpr auto less_than(T const& lhs, U const& rhs) -> concepts::nd_vector_of_t<bool, T::size> auto{
+    concepts::vector_backend auto ret = typename T::template rebind<bool>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = lhs[i] < rhs[i];
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U, concepts::vector V>
+    requires(T::size == U::size && U::size == V::size)
+constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::nd_vector<T::size> auto{
+    using ret_value_type =
+      core::type_promotion_t<typename T::value_type, typename U::value_type, typename V::value_type>;
+    concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = lhs[i] * (1 - param[i]) + rhs[i] * param[i];
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U, typename V>
+    requires(T::size == U::size && std::is_arithmetic_v<V>)
+constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::nd_vector<T::size> auto{
+    using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type, V>;
+    concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = lhs[i] * (1 - param) + rhs[i] * param;
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
+constexpr auto pow(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
+    concepts::vector_backend auto ret = typename T::template rebind<typename T::value_type>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::pow<typename T::value_type>(lhs[i], rhs[i]);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, typename U>
+    requires(std::is_arithmetic_v<U>)
+constexpr auto pow(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto{
+    concepts::vector_backend auto ret = typename T::template rebind<typename T::value_type>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::pow<typename T::value_type>(lhs[i], rhs);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U>
 constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering {
     if constexpr (T::size != U::size) {
         return std::partial_ordering::unordered;
@@ -169,62 +178,6 @@ constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering 
         if (t != ret) {
             return std::partial_ordering::unordered;
         }
-    }
-
-    return ret;
-}
-
-namespace detail {
-
-constexpr auto swizzle_index(char c) -> usize {
-    switch (c) {
-        case 's': [[fallthrough]];
-        case 'r': [[fallthrough]];
-        case 'x': return 0;
-
-        case 't': [[fallthrough]];
-        case 'g': [[fallthrough]];
-        case 'y': return 1;
-
-        case 'p': [[fallthrough]];
-        case 'b': [[fallthrough]];
-        case 'z': return 2;
-
-        case 'q': [[fallthrough]];
-        case 'a': [[fallthrough]];
-        case 'w': return 3;
-
-        default: return std::numeric_limits<usize>::max();
-    }
-}
-
-template<string_literal Lit>
-constexpr auto swizzle_needed_dimensions() -> usize {
-    usize dims = 0;
-    for (char c : Lit) {
-        dims = std::max(dims, swizzle_index(c) + 1);
-    }
-    return dims;
-}
-
-template<string_literal Lit, typename T>
-concept can_swizzle =                                                                  //
-  concepts::vector<T> &&                                                               //
-  std::all_of(Lit.begin(), Lit.end(), [](char c) { return 'z' >= c && c >= 'w'; }) &&  //
-  (T::size >= swizzle_needed_dimensions<Lit>());
-
-}  // namespace detail
-
-template<string_literal Lit, concepts::vector T>
-constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto{
-    static_assert(detail::can_swizzle<Lit, T>);
-
-    concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto ret =
-      typename T::template rebind_n<typename T::value_type, Lit.size()>{};
-
-    for (usize i = 0; char c : Lit) {
-        usize index = detail::swizzle_index(c);
-        ret[i++] = vec[index];
     }
 
     return ret;

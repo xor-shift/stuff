@@ -60,26 +60,42 @@ struct image {
     }
 
     constexpr image(image const& other)
-        : m_allocator(other.m_allocator)
-        , m_data(m_allocator.allocate(other.m_width * other.m_height))
-        , m_width(other.m_width)
-        , m_height(other.m_height)
-        , m_color_space(other.m_color_space) {
-        std::copy_n(other.m_data, size(), m_data);
+        : image() {
+        *this = other;
     }
 
     constexpr image(image&& other)
-        : m_allocator(other.m_allocator)
-        , m_data(other.m_data)
-        , m_width(other.m_width)
-        , m_height(other.m_height)
-        , m_color_space(other.m_color_space) {
+        : image() {
+        *this = std::move(other);
+    }
+
+    constexpr auto operator=(image const& other) -> image& {
+        m_allocator = other.m_allocator;
+        m_data = m_allocator.allocate(other.m_width * other.m_height);
+        m_width = other.m_width;
+        m_height = other.m_height;
+        m_color_space = other.m_color_space;
+
+        std::copy_n(other.m_data, size(), m_data);
+
+        return *this;
+    }
+
+    constexpr auto operator=(image&& other) -> image& {
+        m_allocator = other.m_allocator;
+        m_data = other.m_data;
+        m_width = other.m_width;
+        m_height = other.m_height;
+        m_color_space = other.m_color_space;
+
         other.m_data = nullptr;
+
+        return *this;
     }
 
     constexpr ~image() { destroy(); }
 
-    constexpr bool empty() const { return m_data == nullptr; }
+    constexpr auto empty() const -> bool { return m_data == nullptr; }
 
     constexpr void destroy() noexcept {
         if (!empty()) {
@@ -118,9 +134,20 @@ struct image {
 
     constexpr auto from_memory(std::span<const u8> data) -> expected::expected<void, std::string_view>;
 
-    void from_file(std::string_view filename) { return from_file({std::filesystem::path{filename}}); }
+    auto from_file(std::string_view filename) -> expected::expected<void, std::string_view> {
+        std::ifstream ifs(std::filesystem::path{filename});
+        return from_file(ifs);
+    }
 
-    void from_file(std::ifstream& ifs);
+    auto from_file(std::ifstream& ifs) -> expected::expected<void, std::string_view> {
+        if (!ifs) {
+            return expected::unexpected{"file could not be opened"};
+        }
+
+        std::vector<u8> data{std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>()};
+
+        return from_memory(data);
+    }
 
     template<typename It>
     constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected::expected<It, std::string_view>;
@@ -130,7 +157,10 @@ struct image {
         return to_file(ofs);
     }
 
-    void to_file(std::ofstream& ofs) const { to_memory(std::ostreambuf_iterator<char>(ofs)); }
+    auto to_file(std::ofstream& ofs) const -> expected::expected<void, std::string_view> {
+        TRYX(to_memory(std::ostreambuf_iterator<char>(ofs)));
+        return {};
+    }
 
 private:
     Allocator m_allocator;
