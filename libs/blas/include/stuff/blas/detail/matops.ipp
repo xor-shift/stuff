@@ -4,7 +4,15 @@ namespace stf::blas {
 
 template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type>
     requires concepts::matrix_backend<matrix_type<T, Size, Size>>
-constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {}
+constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {
+    matrix_type<T, Size, Size> ret {};
+
+    for (usize i = 0; i < Size; i++) {
+        ret[i][i] = 1;
+    }
+
+    return ret;
+}
 
 template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
     requires concepts::matrix_backend<matrix_type<T, 2, 2>>

@@ -12,6 +12,11 @@ template<> struct sphere_sampler<1>;
 template<> struct sphere_sampler<2>;
 
 template<size_t N>
+struct cos_sphere_sampler;
+
+template<> struct cos_sphere_sampler<2>;
+
+template<size_t N>
 struct ball_sampler;
 
 template<> struct ball_sampler<2>;
@@ -81,6 +86,16 @@ struct sphere_sampler<2> {
 
     template<std::floating_point T, typename Gen>
     static constexpr auto sample(Gen& gen) -> blas::vector<T, 3> { return rejection_marsaglia<T>(gen); }
+};
+
+template<>
+struct cos_sphere_sampler<2> {
+    template<std::floating_point T, typename Gen>
+    static constexpr auto polar(Gen& gen) -> std::pair<blas::vector<T, 3>, T>;
+
+    template<std::floating_point T, typename Gen>
+    static constexpr auto power_polar(T alpha, Gen& gen) -> std::pair<blas::vector<T, 3>, T>;
+
 };
 
 }  // namespace stf::random

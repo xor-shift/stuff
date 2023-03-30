@@ -315,3 +315,27 @@ TEST(ranvec, vis_s2) {
     visualise_points("vis_s2_rejection_cook_x.qoi", [&] { return swizzle<"yz">(sphere_sampler<2>::rejection_cook<T>(gen_xoshiro)); });
     // clang-format on
 }
+
+TEST(ranvec, vis_s2_non_uniform) {
+    using stf::random::cos_sphere_sampler;
+    stf::random::xoshiro_256p gen_xoshiro{};
+
+    using T = double;
+
+    // clang-format off
+    visualise_points("vis_s2_cos_polar_z.qoi", [&] { return swizzle<"xy">(cos_sphere_sampler<2>::polar<T>(gen_xoshiro).first); });
+    visualise_points("vis_s2_cos_polar_y.qoi", [&] { return swizzle<"xz">(cos_sphere_sampler<2>::polar<T>(gen_xoshiro).first); });
+    visualise_points("vis_s2_cos_polar_x.qoi", [&] { return swizzle<"yz">(cos_sphere_sampler<2>::polar<T>(gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.0_z.qoi", [&] { return swizzle<"xy">(cos_sphere_sampler<2>::power_polar<T>(1, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.0_y.qoi", [&] { return swizzle<"xz">(cos_sphere_sampler<2>::power_polar<T>(1, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.0_x.qoi", [&] { return swizzle<"yz">(cos_sphere_sampler<2>::power_polar<T>(1, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.5_z.qoi", [&] { return swizzle<"xy">(cos_sphere_sampler<2>::power_polar<T>(1.5, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.5_y.qoi", [&] { return swizzle<"xz">(cos_sphere_sampler<2>::power_polar<T>(1.5, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_1.5_x.qoi", [&] { return swizzle<"yz">(cos_sphere_sampler<2>::power_polar<T>(1.5, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_2.0_z.qoi", [&] { return swizzle<"xy">(cos_sphere_sampler<2>::power_polar<T>(2, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_2.0_y.qoi", [&] { return swizzle<"xz">(cos_sphere_sampler<2>::power_polar<T>(2, gen_xoshiro).first); });
+    visualise_points("vis_s2_pcos_polar_2.0_x.qoi", [&] { return swizzle<"yz">(cos_sphere_sampler<2>::power_polar<T>(2, gen_xoshiro).first); });
+    // clang-format on
+
+
+}

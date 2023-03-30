@@ -30,7 +30,7 @@ constexpr auto sample_n_ball_rejection(Gen& gen) -> blas::vector<T, N> {
     return ret;
 }
 
-}
+}  // namespace stf::random::detail
 
 // ball_sampler<2> functions
 
@@ -72,7 +72,7 @@ constexpr auto ball_sampler<2>::concentric(Gen& gen) -> blas::vector<T, 2> {
     return {r * std::cos(theta), r * std::sin(theta)};
 }
 
-}
+}  // namespace stf::random
 
 // ball_sampler<3> functions
 
@@ -89,7 +89,7 @@ constexpr auto ball_sampler<3>::radius(Gen& gen) -> blas::vector<T, 3> {
     return sphere_sampler<2>::sample<T>(gen) * std::cbrt(dist(gen));
 }
 
-}
+}  // namespace stf::random
 
 // sphere_sampler<1> functions
 
@@ -127,7 +127,7 @@ constexpr auto sphere_sampler<1>::normal(Gen& gen) -> blas::vector<T, 2> {
     return detail::sample_n_sphere_normal<T, 1>(gen);
 }
 
-}
+}  // namespace stf::random
 
 // sphere_sampler<2> functions
 
@@ -213,4 +213,38 @@ constexpr auto sphere_sampler<2>::rejection_cook(Gen& gen) -> blas::vector<T, 3>
     return {x, y, z};
 }
 
+template<std::floating_point T, typename Gen>
+constexpr auto cos_sphere_sampler<2>::polar(Gen& gen) -> std::pair<blas::vector<T, 3>, T> {
+    erand48_distribution<T> dist{};
+
+    T ct = std::sqrt(dist(gen));
+    T st = std::sqrt(1 - ct * ct);
+
+    T pdf = ct * std::numbers::inv_pi_v<T>;
+
+    T phi = 2 * std::numbers::pi_v<T> * dist(gen);
+
+    T sp = std::sin(phi);
+    T cp = std::cos(phi);
+
+    return {{cp * st, sp * st, ct}, pdf};
 }
+
+template<std::floating_point T, typename Gen>
+constexpr auto cos_sphere_sampler<2>::power_polar(T alpha, Gen& gen) -> std::pair<blas::vector<T, 3>, T> {
+    erand48_distribution<T> dist{};
+
+    T ct = std::pow(dist(gen), T(1) / (alpha + 1));
+    T st = std::sqrt(1 - ct * ct);
+
+    T pdf = (alpha + 1) * std::pow(ct, alpha) * T(0.5) * std::numbers::inv_pi_v<T>;
+
+    T phi = 2 * std::numbers::pi_v<T> * dist(gen);
+
+    T sp = std::sin(phi);
+    T cp = std::cos(phi);
+
+    return {{cp * st, sp * st, ct}, pdf};
+}
+
+}  // namespace stf::random

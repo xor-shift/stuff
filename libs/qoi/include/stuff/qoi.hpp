@@ -152,7 +152,7 @@ struct image {
     template<typename It>
     constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected::expected<It, std::string_view>;
 
-    void to_file(std::string_view filename) const {
+    auto to_file(std::string_view filename) const -> expected::expected<void, std::string_view> {
         std::ofstream ofs(std::filesystem::path{filename});
         return to_file(ofs);
     }
