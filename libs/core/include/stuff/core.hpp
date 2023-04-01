@@ -82,4 +82,9 @@ inline void assume(bool pred) {
     }
 }
 
+template<string_literal Lit>
+inline void unreachable_with_message() {
+    std::unreachable();
+}
+
 };  // namespace stf

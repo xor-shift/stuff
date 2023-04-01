@@ -53,49 +53,49 @@ constexpr auto elementwise_fn(T lhs, U const& rhs, Fn&& functor = {}) {
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::plus<>{});
 }
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::minus<>{});
 }
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::multiplies<>{});
 }
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator/(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator/(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::divides<>{});
 }
 
 template<concepts::vector T, typename U>
     requires std::is_arithmetic_v<U>
-constexpr auto operator/(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator/(T const& lhs, U rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::divides<>{});
 }
 
 template<typename T, concepts::vector U>
     requires std::is_arithmetic_v<T>
-constexpr auto operator/(T lhs, U const& rhs) -> concepts::nd_vector<U::size> auto{
+constexpr auto operator/(T lhs, U const& rhs) -> concepts::vector_like<U> auto{
     return detail::elementwise_fn(lhs, rhs, std::divides<>{});
 }
 
 template<concepts::vector T, typename U>
     requires std::is_arithmetic_v<U>
-constexpr auto operator*(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto{
+constexpr auto operator*(T const& lhs, U rhs) -> concepts::vector_like<T> auto{
     return detail::elementwise_fn(lhs, rhs, std::multiplies<>{});
 }
 
 template<typename T, concepts::vector U>
     requires std::is_arithmetic_v<T>
-constexpr auto operator*(T lhs, U const& rhs) -> concepts::nd_vector<U::size> auto{
+constexpr auto operator*(T lhs, U const& rhs) -> concepts::vector_like<U> auto{
     return detail::elementwise_fn(lhs, rhs, std::multiplies<>{});
 }
 

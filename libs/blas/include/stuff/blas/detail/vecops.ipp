@@ -61,9 +61,9 @@ constexpr auto cross(T const& x, U const& y) -> concepts::nd_vector<7> auto{
 }
 
 template<concepts::vector T>
-constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto{
-    using ret_type = typename T::template rebind<typename T::value_type>;
-    concepts::nd_vector_of_t<typename T::value_type, T::size> auto ret = ret_type{};
+constexpr auto operator-(T const& v) -> concepts::vector_like<T> auto{
+    using ret_type = typename T::template rebind<>;
+    concepts::vector_like<T> auto ret = ret_type{};
 
     for (usize i = 0; i < T::size; i++) {
         ret[i] = -v[i];
@@ -73,9 +73,9 @@ constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::val
 }
 
 /*template<concepts::vector T>
-constexpr auto abs(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto {
-    using ret_type = typename T::template rebind<typename T::value_type>;
-    concepts::nd_vector_of_t<typename T::value_type, T::size> auto ret = ret_type{};
+constexpr auto abs(T const& v) -> concepts::vector_like<T> auto {
+    using ret_type = typename T::template rebind<>;
+    concepts::vector_like<T> auto ret = ret_type{};
 
     for (usize i = 0; i < T::size; i++) {
         ret[i] = v[i] < 0 ? -v[i] : v[i];
@@ -98,7 +98,18 @@ constexpr auto abs(T const& v) -> typename T::value_type {
 }
 
 template<concepts::vector T>
-constexpr auto normalize(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto{
+constexpr auto elem_abs(T const& v) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::abs(v[i]);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T>
+constexpr auto normalize(T const& v) -> concepts::vector_like<T> auto{
     return v / abs(v);
 }
 
@@ -116,7 +127,7 @@ constexpr auto less_than(T const& lhs, U const& rhs) -> concepts::nd_vector_of_t
 
 template<concepts::vector T, concepts::vector U, concepts::vector V>
     requires(T::size == U::size && U::size == V::size)
-constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::nd_vector<T::size> auto{
+constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::vector_like<T> auto{
     using ret_value_type =
       core::type_promotion_t<typename T::value_type, typename U::value_type, typename V::value_type>;
     concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
@@ -130,7 +141,7 @@ constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::nd_v
 
 template<concepts::vector T, concepts::vector U, typename V>
     requires(T::size == U::size && std::is_arithmetic_v<V>)
-constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::nd_vector<T::size> auto{
+constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::vector_like<T> auto{
     using ret_value_type = core::type_promotion_t<typename T::value_type, typename U::value_type, V>;
     concepts::vector_backend auto ret = typename T::template rebind<ret_value_type>{};
 
@@ -143,8 +154,8 @@ constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::nd_vector<T
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto pow(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto{
-    concepts::vector_backend auto ret = typename T::template rebind<typename T::value_type>{};
+constexpr auto pow(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
 
     for (usize i = 0; i < T::size; i++) {
         ret[i] = std::pow<typename T::value_type>(lhs[i], rhs[i]);
@@ -155,8 +166,8 @@ constexpr auto pow(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> a
 
 template<concepts::vector T, typename U>
     requires(std::is_arithmetic_v<U>)
-constexpr auto pow(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto{
-    concepts::vector_backend auto ret = typename T::template rebind<typename T::value_type>{};
+constexpr auto pow(T const& lhs, U rhs) -> concepts::vector_like<T> auto{
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
 
     for (usize i = 0; i < T::size; i++) {
         ret[i] = std::pow<typename T::value_type>(lhs[i], rhs);

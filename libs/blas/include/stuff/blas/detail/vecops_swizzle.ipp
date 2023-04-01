@@ -45,7 +45,7 @@ constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::val
     static_assert(detail::can_swizzle<Lit, T>);
 
     concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto ret =
-      typename T::template rebind_n<typename T::value_type, Lit.size()>{};
+      typename T::template rebind<typename T::value_type, Lit.size()>{};
 
     for (usize i = 0; char c : Lit) {
         usize index = detail::swizzle_index(c);

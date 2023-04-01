@@ -3,6 +3,7 @@
 #include <concepts>
 
 #include <stuff/core/integers.hpp>
+#include <stuff/core/type_traits.hpp>
 
 namespace stf::blas::concepts {
 
@@ -40,7 +41,7 @@ concept vector =  //
       // actually, maybe don't implement this?
       // this behaviour being unconstrained is useful for matrix_row
       //
-      // template<typename U> class T::rebind;
+      // template<typename U = typename T::value_type, size_t N = T::size> class T::rebind;
 
       { T::size } -> std::convertible_to<usize>;
       { std::integral_constant<usize, T::size>::value } -> std::convertible_to<usize>;
@@ -57,6 +58,9 @@ concept vector_of_t = vector<T> && std::is_same_v<typename T::value_type, U>;
 
 template<typename T, typename U, usize Dims>
 concept nd_vector_of_t = nd_vector<T, Dims> && vector_of_t<T, U>;
+
+template<typename T, typename V>
+concept vector_like = vector<V> && nd_vector_of_t<T, typename V::value_type, V::size>;
 
 /// A mutable vector.
 template<typename T>

@@ -10,11 +10,8 @@ struct vector {
     using value_type = T;
     inline static constexpr usize size = Size;
 
-    template<typename U>
-    using rebind = vector<U, Size>;
-
-    template<typename U, usize N>
-    using rebind_n = vector<U, N>;
+    template<typename U = T, usize N = Size>
+    using rebind = vector<U, N>;
 
     constexpr vector() = default;
 
@@ -99,56 +96,59 @@ constexpr auto dot(T const& lhs, U const& rhs)
 /// vector-expression equivalent to it.
 /// Only valid for spaces of R³ and R⁷.
 template<concepts::vector T, concepts::vector U>
-constexpr auto cross(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto cross(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 /// @return
 /// The negation of <code>v</code> or a vector-expression equivalent to it.
 template<concepts::vector T>
-constexpr auto operator-(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto;
+constexpr auto operator-(T const& v) -> concepts::vector_like<T> auto;
 
 /// @return
 /// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a
 /// vector-expression equivalent to it.
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 /// @return
 /// The elementwise subtraction of <code>lhs</code> and <code>rhs</code> or a
 /// vector-expression equivalent to it.
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
-constexpr auto operator/(T const& lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator/(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, typename U>
     requires std::is_arithmetic_v<U>
-constexpr auto operator/(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator/(T const& lhs, U rhs) -> concepts::vector_like<T> auto;
 
 template<typename T, concepts::vector U>
     requires std::is_arithmetic_v<T>
-constexpr auto operator/(T lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator/(T lhs, U const& rhs) -> concepts::vector_like<U> auto;
 
 template<concepts::vector T, typename U>
     requires std::is_arithmetic_v<U>
-constexpr auto operator*(T const& lhs, U rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator*(T const& lhs, U rhs) -> concepts::vector_like<T> auto;
 
 template<typename T, concepts::vector U>
     requires std::is_arithmetic_v<T>
-constexpr auto operator*(T lhs, U const& rhs) -> concepts::nd_vector<T::size> auto;
+constexpr auto operator*(T lhs, U const& rhs) -> concepts::vector_like<U> auto;
 
 template<concepts::vector T>
 constexpr auto abs(T const& v) -> typename T::value_type;
 
 template<concepts::vector T>
-constexpr auto normalize(T const& v) -> concepts::nd_vector_of_t<typename T::value_type, T::size> auto;
+constexpr auto elem_abs(T const& v) -> concepts::vector_like<T> auto;
+
+template<concepts::vector T>
+constexpr auto normalize(T const& v) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
@@ -156,11 +156,11 @@ constexpr auto less_than(T const& lhs, U const& rhs) -> concepts::nd_vector_of_t
 
 template<concepts::vector T, concepts::vector U, concepts::vector V>
     requires(T::size == U::size && U::size == V::size)
-constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::nd_vector<T::size> auto;
+constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, concepts::vector U, typename V>
     requires(T::size == U::size && std::is_arithmetic_v<V>)
-constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::nd_vector<T::size> auto;
+constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::vector_like<T> auto;
 
 /// @return
 /// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n
