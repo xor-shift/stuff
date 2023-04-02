@@ -162,6 +162,14 @@ template<concepts::vector T, concepts::vector U, typename V>
     requires(T::size == U::size && std::is_arithmetic_v<V>)
 constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::vector_like<T> auto;
 
+template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
+constexpr auto min(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
+
+template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
+constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
+
 /// @return
 /// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n
 /// If all elements of <code>lhs</code> are in the same relation to the corresponding elements in <code>rhs</code>

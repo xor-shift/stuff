@@ -154,6 +154,30 @@ constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::vector_like
 
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
+constexpr auto min(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::min<typename T::value_type>(lhs[i], rhs[i]);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
+constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::max<typename T::value_type>(lhs[i], rhs[i]);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U>
+    requires(T::size == U::size)
 constexpr auto pow(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
     concepts::vector_backend auto ret = typename T::template rebind<>{};
 
