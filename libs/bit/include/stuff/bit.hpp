@@ -8,13 +8,13 @@
 
 namespace stf::bit {
 
-template<std::unsigned_integral T>
+template<typename T>
 constexpr auto reverse_bits(T v) -> T;
 
-template<std::unsigned_integral T>
+template<typename T>
 constexpr auto reverse_bytes(T v) -> T;
 
-template<std::unsigned_integral T>
+template<typename T>
 constexpr auto convert_endian(T v, std::endian from, std::endian to) -> T {
     return from == to ? v : reverse_bytes(v);
 }

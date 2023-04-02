@@ -83,12 +83,12 @@ constexpr auto reverse_bits_naive(T v) -> T {
 
 }  // namespace detail
 
-template<std::unsigned_integral T>
+template<typename T>
 constexpr auto reverse_bits(T v) -> T {
     return detail::reverse_bits_patterns(v);
 }
 
-template<std::unsigned_integral T>
+template<typename T>
 constexpr auto reverse_bytes(T v) -> T {
     if consteval {
         auto arr = std::bit_cast<std::array<char, sizeof(T)>>(v);
