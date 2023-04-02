@@ -52,8 +52,8 @@ struct no_default_constructor {
 };
 
 TEST(expected, expected) {
-    using stf::expected::expected;
-    using stf::expected::unexpected;
+    using stf::expected;
+    using stf::unexpected;
 
     expected<int, float> exp_0{};
     ASSERT_TRUE(noexcept(decltype(exp_0){}));
@@ -110,7 +110,7 @@ TEST(expected, expected) {
     expected<char, float> exp_4{unexpected{4}};
     ASSERT_NE(exp_4, 0);
     ASSERT_NE(exp_4, exp_3);
-    ASSERT_THROW(exp_4.value(), stf::expected::bad_expected_access<float>);
+    ASSERT_THROW(exp_4.value(), stf::bad_expected_access<float>);
     ASSERT_EQ(exp_4.error(), 4);
 
     expected<no_default_constructor, float> exp_5{unexpected{5}};
@@ -118,8 +118,8 @@ TEST(expected, expected) {
 }
 
 TEST(expected, expected_void_t) {
-    using stf::expected::expected;
-    using stf::expected::unexpected;
+    using stf::expected;
+    using stf::unexpected;
 
     expected<void, int> exp_0{};
     ASSERT_TRUE(exp_0.has_value());
@@ -127,13 +127,13 @@ TEST(expected, expected_void_t) {
 
     expected<void, int> exp_1{unexpected{5}};
     ASSERT_FALSE(exp_1.has_value());
-    ASSERT_THROW(exp_1.value(), stf::expected::bad_expected_access<int>);
+    ASSERT_THROW(exp_1.value(), stf::bad_expected_access<int>);
     ASSERT_EQ(exp_1.error(), 5);
 }
 
 TEST(expected, tryx) {
-    using stf::expected::expected;
-    using stf::expected::unexpected;
+    using stf::expected;
+    using stf::unexpected;
 
     auto fn_0 = [](int i) -> expected<int, std::string_view> {
         if (i % 2) {

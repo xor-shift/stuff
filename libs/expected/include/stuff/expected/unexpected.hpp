@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace stf::expected {
+namespace stf {
 
 template<typename E>
     requires(!std::is_same_v<void, E>)
@@ -85,4 +85,4 @@ struct is_unexpected<const volatile T> : is_unexpected<T> {};
 template<typename T>
 static constexpr bool is_unexpected_v = is_unexpected<T>::value;
 
-}  // namespace stf::expected
+}  // namespace stf

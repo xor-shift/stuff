@@ -10,12 +10,11 @@
 namespace stf::qoi::detail {
 
 template<typename It>
-constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels)
-  -> expected::expected<It, std::string_view>;
+constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels) -> expected<It, std::string_view>;
 
 template<typename It>
 constexpr auto encode_lossy(It out_data, std::span<const color> in_pixels, double tolerance = 1)
-  -> expected::expected<It, std::string_view>;
+  -> expected<It, std::string_view>;
 
 }  // namespace stf::qoi::detail
 

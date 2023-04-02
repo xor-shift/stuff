@@ -1,5 +1,4 @@
 #pragma once
-#include <stuff/expected/detail/storage.hpp>
 
 #include <stuff/expected/detail/exception.hpp>
 #include <stuff/expected/unexpected.hpp>
@@ -9,7 +8,7 @@
 #include <memory>
 #include <variant>
 
-namespace stf::expected {
+namespace stf {
 
 struct unexpect_t {};
 
@@ -715,4 +714,4 @@ private:
     }
 };
 
-}  // namespace stf::expected
+}  // namespace stf

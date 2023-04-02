@@ -2,7 +2,7 @@
 
 #include <exception>
 
-namespace stf::expected {
+namespace stf {
 
 template<typename T>
 struct bad_expected_access;

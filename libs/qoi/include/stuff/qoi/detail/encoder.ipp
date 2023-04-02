@@ -144,9 +144,9 @@ struct tolerant_encoder : lossless_encoder<It> {
             return lossless_encoder<It>::pixel(*res);
         }
 
-        //if (auto res = try_hash(c); res) {
-        //    return lossless_encoder<It>::pixel(*res);
-        //}
+        // if (auto res = try_hash(c); res) {
+        //     return lossless_encoder<It>::pixel(*res);
+        // }
 
         return lossless_encoder<It>::pixel(c);
     }
@@ -165,9 +165,7 @@ private:
         return dist;
     }
 
-    constexpr auto try_diff(color c, double dist) -> std::optional<color> {
-        return std::nullopt;
-    }
+    constexpr auto try_diff(color c, double dist) -> std::optional<color> { return std::nullopt; }
 
     constexpr auto try_prev(color c) -> std::optional<color> {
         color prev = lossless_encoder<It>::m_prev_color;
@@ -211,8 +209,7 @@ private:
 }  // namespace encoder
 
 template<typename It>
-constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels)
-  -> expected::expected<It, std::string_view> {
+constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels) -> expected<It, std::string_view> {
     encoder::lossless_encoder encoder{out_data};
     for (color c : in_pixels) {
         encoder.pixel(c);
@@ -222,7 +219,7 @@ constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels)
 
 template<typename It>
 constexpr auto encode_lossy(It out_data, std::span<const color> in_pixels, double tolerance)
-  -> expected::expected<It, std::string_view> {
+  -> expected<It, std::string_view> {
     encoder::tolerant_encoder encoder{out_data, tolerance};
     for (color c : in_pixels) {
         encoder.pixel(c);

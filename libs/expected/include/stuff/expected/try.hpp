@@ -5,7 +5,7 @@
 
 #include <optional>
 
-namespace stf::expected::detail {
+namespace stf::detail {
 
 template<typename T>
 struct try_helper;
@@ -42,12 +42,12 @@ struct try_helper<volatile T> : try_helper<T> {};
 template<typename T>
 struct try_helper<const volatile T> : try_helper<T> {};
 
-}  // namespace stf::expected::detail
+}  // namespace stf::detail
 
 #define TRYX_NUMBERED(_no, ...)                                                               \
     ({                                                                                        \
         auto _res_##_no = (__VA_ARGS__);                                                      \
-        using _helper_type_##_no = ::stf::expected::detail::try_helper<decltype(_res_##_no)>; \
+        using _helper_type_##_no = ::stf::detail::try_helper<decltype(_res_##_no)>; \
         if (!_helper_type_##_no::has_value(_res_##_no)) {                                     \
             return _helper_type_##_no::error(std::move(_res_##_no));                          \
         }                                                                                     \
@@ -57,7 +57,7 @@ struct try_helper<const volatile T> : try_helper<T> {};
 #define TRYX(...)                                                                 \
     ({                                                                            \
         auto _res = (__VA_ARGS__);                                                \
-        using _helper_type = ::stf::expected::detail::try_helper<decltype(_res)>; \
+        using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
         if (!_helper_type::has_value(_res)) {                                     \
             return _helper_type::error(std::move(_res));                          \
         }                                                                         \

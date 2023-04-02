@@ -132,16 +132,16 @@ struct image {
     constexpr auto at(u32 x, u32 y) -> color& { return m_data[y * m_width + x]; }
     constexpr auto at(u32 x, u32 y) const -> color { return m_data[y * m_width + x]; }
 
-    constexpr auto from_memory(std::span<const u8> data) -> expected::expected<void, std::string_view>;
+    constexpr auto from_memory(std::span<const u8> data) -> expected<void, std::string_view>;
 
-    auto from_file(std::string_view filename) -> expected::expected<void, std::string_view> {
+    auto from_file(std::string_view filename) -> expected<void, std::string_view> {
         std::ifstream ifs(std::filesystem::path{filename});
         return from_file(ifs);
     }
 
-    auto from_file(std::ifstream& ifs) -> expected::expected<void, std::string_view> {
+    auto from_file(std::ifstream& ifs) -> expected<void, std::string_view> {
         if (!ifs) {
-            return expected::unexpected{"file could not be opened"};
+            return unexpected{"file could not be opened"};
         }
 
         std::vector<u8> data{std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>()};
@@ -150,14 +150,14 @@ struct image {
     }
 
     template<typename It>
-    constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected::expected<It, std::string_view>;
+    constexpr auto to_memory(It out, double loss_tolerance = 0) const -> expected<It, std::string_view>;
 
-    auto to_file(std::string_view filename) const -> expected::expected<void, std::string_view> {
+    auto to_file(std::string_view filename) const -> expected<void, std::string_view> {
         std::ofstream ofs(std::filesystem::path{filename});
         return to_file(ofs);
     }
 
-    auto to_file(std::ofstream& ofs) const -> expected::expected<void, std::string_view> {
+    auto to_file(std::ofstream& ofs) const -> expected<void, std::string_view> {
         TRYX(to_memory(std::ostreambuf_iterator<char>(ofs)));
         return {};
     }

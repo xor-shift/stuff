@@ -16,9 +16,9 @@ constexpr void decode_from_memory(detail::raw_header raw_header, std::span<const
 }
 
 template<typename Allocator>
-constexpr auto image<Allocator>::from_memory(std::span<const u8> data) -> expected::expected<void, std::string_view> {
+constexpr auto image<Allocator>::from_memory(std::span<const u8> data) -> expected<void, std::string_view> {
     if (data.size() < 14)
-        return expected::unexpected{"the data is too small to contain a header"};
+        return unexpected{"the data is too small to contain a header"};
 
     std::array<char, sizeof(detail::raw_header)> header_data;
     std::copy_n(data.begin(), 14, header_data.begin());
@@ -32,13 +32,13 @@ constexpr auto image<Allocator>::from_memory(std::span<const u8> data) -> expect
     switch (raw_header.channels) {
         case static_cast<u8>(channels::rgb): channels = channels::rgb; break;
         case static_cast<u8>(channels::rgba): channels = channels::rgba; break;
-        default: return expected::unexpected{"invalid channel specifier"};
+        default: return unexpected{"invalid channel specifier"};
     }
 
     switch (raw_header.colorspace) {
         case static_cast<u8>(color_space::srgb_linear_alpha): color_space = color_space::srgb_linear_alpha; break;
         case static_cast<u8>(color_space::all_linear): color_space = color_space::all_linear; break;
-        default: return expected::unexpected{"invalid colorspace specifier"};
+        default: return unexpected{"invalid colorspace specifier"};
     }
 
     create(raw_header.width, raw_header.height, color_space);
@@ -50,8 +50,7 @@ constexpr auto image<Allocator>::from_memory(std::span<const u8> data) -> expect
 
 template<typename Allocator>
 template<typename It>
-constexpr auto image<Allocator>::to_memory(It out, double loss_tolerance) const
-  -> expected::expected<It, std::string_view> {
+constexpr auto image<Allocator>::to_memory(It out, double loss_tolerance) const -> expected<It, std::string_view> {
     detail::raw_header raw_header{
       .magic = {'q', 'o', 'i', 'f'},
       .width = m_width,
