@@ -5,7 +5,7 @@ namespace stf::blas {
 template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type>
     requires concepts::matrix_backend<matrix_type<T, Size, Size>>
 constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {
-    matrix_type<T, Size, Size> ret {};
+    matrix_type<T, Size, Size> ret{};
 
     for (usize i = 0; i < Size; i++) {
         ret[i][i] = 1;
@@ -39,7 +39,42 @@ constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3> {
     matrix_type<T, 3, 3> y_mat{yc, 0, ys, 0, 1, 0, -ys, 0, yc};
     matrix_type<T, 3, 3> z_mat{zc, -zs, 0, zs, zc, 0, 0, 0, 1};
 
-    return (z_mat * y_mat) * x_mat;
+    return z_mat * y_mat * x_mat;
+}
+
+template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
+    requires concepts::matrix_backend<matrix_type<T, 4, 4>>
+constexpr auto homogeneous_transformation_matrix(homogenous_transformation<T> description) -> matrix_type<T, 4, 4> {
+    T rxs = static_cast<T>(std::sin(description.rotation[0]));
+    T rxc = static_cast<T>(std::cos(description.rotation[0]));
+    T rys = static_cast<T>(std::sin(description.rotation[1]));
+    T ryc = static_cast<T>(std::cos(description.rotation[1]));
+    T rzs = static_cast<T>(std::sin(description.rotation[2]));
+    T rzc = static_cast<T>(std::cos(description.rotation[2]));
+
+    matrix_type<T, 4, 4> x_rot_mat{1, 0, 0, 0, /**/ 0, rxc, -rxs, 0, /**/ 0, rxs, rxc, 0, /**/ 0, 0, 0, 1};
+    matrix_type<T, 4, 4> y_rot_mat{ryc, 0, rys, 0, /**/ 0, 1, 0, 0, /**/ -rys, 0, ryc, 0, /**/ 0, 0, 0, 1};
+    matrix_type<T, 4, 4> z_rot_mat{rzc, -rzs, 0, 0, /**/ rzs, rzc, 0, 0, /**/ 0, 0, 1, 0, /**/ 0, 0, 0, 1};
+
+    // clang-format off
+
+    matrix_type<T, 4, 4> trans_mat{
+      1, 0, 0, description.translation[0],
+      0, 1, 0, description.translation[1],
+      0, 0, 1, description.translation[2],
+      0, 0, 0, 1,
+    };
+
+    matrix_type<T, 4, 4> scale_mat{
+      description.scale[0], 0, 0, 0,
+      0, description.scale[1], 0, 0,
+      0, 0, description.scale[2], 0,
+      0, 0, 0, 1,
+    };
+
+    // clang-format on
+
+    return trans_mat * scale_mat * x_rot_mat * y_rot_mat * z_rot_mat;
 }
 
 namespace detail {

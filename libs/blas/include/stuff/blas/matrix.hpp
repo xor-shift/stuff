@@ -147,6 +147,17 @@ template<typename T, template<typename U, usize Rows, usize Cols> class matrix_t
     requires concepts::matrix_backend<matrix_type<T, 3, 3>>
 constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3>;
 
+template<typename T>
+struct homogenous_transformation {
+    std::array<T, 3> rotation{0, 0, 0};
+    std::array<T, 3> scale{1, 1, 1};
+    std::array<T, 3> translation{0, 0, 0};
+};
+
+template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
+    requires concepts::matrix_backend<matrix_type<T, 4, 4>>
+constexpr auto homogeneous_transformation_matrix(homogenous_transformation<T> description) -> matrix_type<T, 4, 4>;
+
 /// @return
 /// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a
 /// matrix-expression equivalent to it.
