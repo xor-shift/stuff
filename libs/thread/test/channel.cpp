@@ -131,7 +131,7 @@ TEST(channel, test_1_buffered) {
 }
 
 TEST(channel, test_2) {
-    // watchdog watchdog{std::chrono::seconds(5)};
+    watchdog watchdog{std::chrono::seconds(5)};
 
     stf::channel<int, 1> chan_0{};
     stf::channel<float, 0> chan_1{};
