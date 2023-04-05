@@ -170,6 +170,12 @@ template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
 constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
+template<concepts::vector T, typename U = typename T::value_type>
+constexpr auto clamp(T const& lhs, U min, U max) -> concepts::vector_like<T> auto;
+
+template<concepts::vector T>
+constexpr auto round(T const& lhs) -> concepts::vector_like<T> auto;
+
 /// @return
 /// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n
 /// If all elements of <code>lhs</code> are in the same relation to the corresponding elements in <code>rhs</code>

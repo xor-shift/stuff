@@ -176,6 +176,28 @@ constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto 
     return ret;
 }
 
+template<concepts::vector T, typename U>
+constexpr auto clamp(T const& lhs, U min, U max) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::clamp<typename T::value_type>(lhs[i], min, max);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T>
+constexpr auto round(T const& lhs) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::round(lhs[i]);
+    }
+
+    return ret;
+}
+
 template<concepts::vector T, concepts::vector U>
     requires(T::size == U::size)
 constexpr auto pow(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto{
