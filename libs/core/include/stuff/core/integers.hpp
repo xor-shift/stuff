@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace stf::integers {
-
 using u8 = ::std::uint8_t;
 using u16 = ::std::uint16_t;
 using u32 = ::std::uint32_t;
@@ -43,6 +41,8 @@ using umax = ::std::uintmax_t;
 using usize = ::std::size_t;
 using isize = ::std::ptrdiff_t;
 
+namespace stf {
+
 namespace detail {
 
 template<size_t Bits>
@@ -77,9 +77,3 @@ template<size_t Bits>
 using nuint = std::make_unsigned_t<typename detail::nint_helper<Bits>::type>;
 
 }  // namespace stf::integers
-
-namespace stf {
-
-using namespace integers;
-
-}  // namespace stf
