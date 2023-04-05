@@ -54,6 +54,13 @@ struct channel {
     attach_receiver(std::shared_ptr<detail::chan_receive_syncer> recv_sync, std::optional<T>& recv_buffer, usize id = 1)
       -> bool;
 
+    /// Forcibly detaches a receiver
+    void detach_receiver() {
+        std::unique_lock lock {m_mutex};
+        detach_receiver_impl();
+        m_receiver_ready_cv.notify_all();
+    }
+
 private:
     allocator_type m_allocator;
 
@@ -80,7 +87,7 @@ private:
 
     constexpr auto have_receiver() const -> bool { return m_receive_sync != nullptr; }
 
-    constexpr void detach_receiver() {
+    constexpr void detach_receiver_impl() {
         m_receive_sync = nullptr;
         m_receiver_buffer = nullptr;
     }
@@ -116,6 +123,8 @@ struct channel_selector_base {
     virtual auto attach(std::shared_ptr<detail::chan_receive_syncer> recv_sync, usize id) -> bool = 0;
 
     virtual void fulfilled() = 0;
+
+    virtual void fulfilled_by_someone_else() = 0;
 };
 
 }  // namespace detail
@@ -134,6 +143,10 @@ struct channel_selector final : detail::channel_selector_base {
     }
 
     void fulfilled() final override { m_fn(m_recv_buffer); }
+
+    void fulfilled_by_someone_else() final override {
+        m_channel.detach_receiver();
+    }
 
 private:
     Channel& m_channel;

@@ -67,16 +67,21 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
         }
 
         // the wake-up was to notify that there's free buffer space available
+        // OR that the receive was cancelled
         if (!have_receiver()) {
-            emplace_immediately(std::forward<Args>(args)...);
-            detach_receiver();
-            return true;
+            if (full()) {
+                continue;
+            } else {
+                emplace_immediately(std::forward<Args>(args)...);
+                detach_receiver_impl();
+                return true;
+            }
         }
 
         std::unique_lock receiver_lock_local{m_receive_sync->recv_mutex};
 
         if (m_receive_sync->recv_fulfilled) {  // someone else fulfilled this recv-op
-            detach_receiver();
+            detach_receiver_impl();
             continue;
         }
 
@@ -90,7 +95,7 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
 
     m_emplace_complete_cv.notify_all();
 
-    detach_receiver();
+    detach_receiver_impl();
 
     return true;
 }
@@ -164,14 +169,30 @@ static void select(Selectors&&... selectors_arg) {
     std::unique_lock recv_lock{recv_sync->recv_mutex};
 
     for (usize i = 0; i < std::size(selectors); i++) {
-        if (!selectors[i]->attach(recv_sync, i + 1)) {
-            selectors[i]->fulfilled();
-            return;
+        if (selectors[i]->attach(recv_sync, i + 1)) {
+            continue;
         }
+
+        for (usize j = 0; j < i; j++) {
+            selectors[j]->fulfilled_by_someone_else();
+        }
+
+        selectors[i]->fulfilled();
+        return;
     }
 
     recv_sync->recv_cv.wait(recv_lock, [&] { return recv_sync->recv_fulfilled; });
     selectors[recv_sync->recv_fulfilled - 1]->fulfilled();
+
+    recv_lock.unlock();
+
+    for (usize i = 0; i < std::size(selectors); i++) {
+        if (i == recv_sync->recv_fulfilled - 1) {
+            continue;
+        }
+
+        selectors[i]->fulfilled_by_someone_else();
+    }
 }
 
 }  // namespace stf
