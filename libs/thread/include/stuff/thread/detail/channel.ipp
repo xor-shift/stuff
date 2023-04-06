@@ -5,26 +5,16 @@ namespace stf {
 template<typename T, usize N, typename Allocator>
 channel<T, N, Allocator>::channel(allocator_type const& allocator)
     : m_allocator(allocator)
-    , m_storage(N == 0 ? nullptr : m_allocator.allocate(N)) {}
+    , m_storage(m_allocator.allocate(N + 1)) {}
 
 template<typename T, usize N, typename Allocator>
 channel<T, N, Allocator>::~channel() noexcept {
     close();
 
     if (m_storage != nullptr) {
-        m_allocator.deallocate(m_storage, N);
+        m_allocator.deallocate(m_storage, N + 1);
         m_storage = nullptr;
     }
-}
-
-template<typename T, usize N, typename Allocator>
-constexpr auto channel<T, N, Allocator>::is_buffered() const -> bool {
-#ifndef NDEBUG
-    if constexpr (N == 0) {
-        assume(m_storage == nullptr);
-    }
-#endif
-    return N != 0 || m_storage != nullptr;
 }
 
 template<typename T, usize N, typename Allocator>
@@ -32,14 +22,12 @@ constexpr void channel<T, N, Allocator>::close() {
     std::unique_lock lock{m_mutex};
     m_closed = true;
 
-    if (have_receiver()) {
-        std::unique_lock sync_lock{m_receive_sync->recv_mutex};
-        m_receive_sync->recv_fulfilled = true;
-        *m_receiver_buffer = std::nullopt;
-        m_receive_sync->recv_cv.notify_all();
-    }
+    m_cv_to_senders.notify_all();
+    m_cv_to_receivers.notify_all();
 
-    detach_receiver_impl(); // moving this here cancels emplaces too
+    if (have_receiver()) {
+        fulfill_receiver();
+    }
 }
 
 template<typename T, usize N, typename Allocator>
@@ -52,53 +40,37 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
         // throw std::runtime_error("sending on a closed channel");
     }
 
-    // we can buffer instead of blocking
-    if (!full() && !have_receiver()) {
-        emplace_immediately(std::forward<Args>(args)...);
+    if (full()) {
+        // block until someone receives the data
+        // or until the channel is closed
+        m_cv_to_senders.wait(lock, [this] { return !full() || closed(); });
+
+        if (closed()) {
+            return false;
+        }
+    }
+
+    emplace_immediately(std::forward<Args>(args)...);
+
+    if (have_receiver()) {
+        fulfill_receiver(std::move(pop_immediately()));
         return true;
     }
 
-    std::unique_lock<std::mutex> receiver_lock{};
+    while (full()) {
+        m_cv_to_senders.wait(lock, [this] { return !full() || closed(); });
 
-    for (;;) {
-        if (!have_receiver()) {
-            m_receiver_update_cv.wait(lock, [this] {  //
-                return have_receiver() || !full() || m_closed;
-            });
-        }
-
-        if (m_closed) {
+        if (closed()) {
             return false;
         }
 
-        // the wake-up was to notify that there's free buffer space available
-        // OR that the receive was cancelled
-        if (!have_receiver()) {
-            if (full()) {
-                continue;
-            } else {
-                emplace_immediately(std::forward<Args>(args)...);
-                detach_receiver_impl();
-                return true;
-            }
-        }
-
-        std::unique_lock receiver_lock_local{m_receive_sync->recv_mutex};
-
-        if (m_receive_sync->recv_fulfilled) {  // someone else fulfilled this recv-op
-            detach_receiver_impl();
+        // receive was cancelled, we *have* to be still full()
+        /*if (!have_receiver()) {
             continue;
-        }
+        }*/
 
-        std::swap(receiver_lock, receiver_lock_local);
         break;
     }
-
-    m_receive_sync->recv_fulfilled = m_receive_fulfill_id;
-    m_receive_sync->recv_cv.notify_one();
-    *m_receiver_buffer = T(std::forward<Args>(args)...);
-
-    detach_receiver_impl();
 
     return true;
 }
@@ -109,49 +81,56 @@ auto channel<T, N, Allocator>::attach_receiver(
   std::optional<T>& recv_buffer,
   usize id
 ) -> bool {
+    // please excuse the comments, i am kind of dumb (very dumb) and can't keep track of everything without hints
+
     std::unique_lock lock{m_mutex};
 
-    if (have_receiver()) {
-        m_receiver_update_cv.wait(lock, [this] { return !have_receiver(); });
+    if (closed()) {
+        recv_sync->recv_fulfilled = id;
+        if (empty()) {
+            recv_buffer = std::nullopt;
+        } else {
+            recv_buffer = pop_immediately();
+        }
+        return false;
     }
 
-    if (!empty()) {
-        // see the first remark
-        // std::unique_lock sync_lock{recv_sync->recv_mutex};
+    if (have_receiver()) {
+        m_cv_to_receivers.wait(lock, [this] { return !have_receiver() || closed(); });
 
-        if (recv_sync->recv_fulfilled) {
+        if (closed()) {
+            recv_sync->recv_fulfilled = id;
+            recv_buffer = std::nullopt;
             return false;
         }
-
-        // hint at the senders that they might be able to buffer data
-        // DO NOT use notify_one. it gives a false impression that these wake-ups are any different from spurious
-        // ones. the fact that the mutex is held by senders will sort out races between waiting emplace_back calls.
-        m_receiver_update_cv.notify_all();
-
-        recv_sync->recv_fulfilled = id;
-        recv_buffer = pop_immediately();
-        return false;
     }
 
-    if (closed()) {
-        return false;
+    if (empty()) {  // no data at hand, register the sync object for the next emplace_back to use
+        m_receive_sync = recv_sync;
+        m_receiver_buffer = &recv_buffer;
+        m_receive_fulfill_id = id;
+
+        // this should do nothing as there must be some data if there is a sender
+        // oh well
+        m_cv_to_senders.notify_all();
+
+        return true;
     }
 
-    m_receive_fulfill_id = id;
-    m_receive_sync = recv_sync;
-    m_receiver_buffer = &recv_buffer;
+    // oops, the mutex should be held anyway
+    // std::unique_lock recv_lock { recv_sync->recv_mutex };
 
-    m_receiver_update_cv.notify_all();
+    recv_sync->recv_fulfilled = id;
+    recv_buffer = pop_immediately();
 
-    return true;
+    // there might be a sender waiting (if we are currently full(), more specifically), notify them
+    m_cv_to_senders.notify_all();
+
+    return false;
 }
 
 template<typename T, usize N, typename Allocator>
 constexpr auto channel<T, N, Allocator>::pop_front() -> std::optional<T> {
-    /*
-     * Semantic notes:
-     */
-
     auto recv_sync = std::make_shared<detail::chan_receive_syncer>();
     std::optional<T> recv_buffer = std::nullopt;
 
@@ -189,7 +168,7 @@ static auto select(Selector&& selector_arg, Selectors&&... selectors_arg) {
         break;
     }
 
-    auto cancel_others = [&] (usize upto) {
+    auto cancel_others = [&](usize upto) {
         for (usize i = 0; i < std::min(std::size(selectors), upto); i++) {
             if (i == recv_sync->recv_fulfilled - 1) {
                 continue;

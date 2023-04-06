@@ -210,7 +210,7 @@ TEST(channel, test_2) {
 }
 
 TEST(channel, test_3) {
-    //watchdog watchdog{std::chrono::seconds(1)};
+    watchdog watchdog{std::chrono::seconds(1)};
 
     stf::channel<int, 1> channel{};
     channel.emplace_back(1);

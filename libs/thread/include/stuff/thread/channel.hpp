@@ -28,8 +28,6 @@ struct channel {
 
     ~channel() noexcept;
 
-    constexpr auto is_buffered() const -> bool;
-
     constexpr void close();
 
     template<typename... Args>
@@ -51,7 +49,11 @@ struct channel {
     /// Forcibly detaches a receiver
     void detach_receiver() {
         std::unique_lock lock{m_mutex};
-        detach_receiver_impl();
+
+        m_receive_sync = nullptr;
+        m_receiver_buffer = nullptr;
+
+        m_cv_to_receivers.notify_all();
     }
 
 private:
@@ -61,7 +63,8 @@ private:
 
     mutable std::mutex m_mutex{};
 
-    std::condition_variable m_receiver_update_cv{};
+    std::condition_variable m_cv_to_receivers{};
+    std::condition_variable m_cv_to_senders{};
 
     std::shared_ptr<detail::chan_receive_syncer> m_receive_sync = nullptr;
     usize m_receive_fulfill_id = 0;
@@ -73,34 +76,38 @@ private:
 
     constexpr auto closed() const -> bool { return m_closed; }
 
-    constexpr auto full() const -> bool { return is_buffered() ? m_buffer_usage == N : true; }
+    constexpr auto full() const -> bool { return m_buffer_usage == N + 1; }
 
-    constexpr auto empty() const -> bool { return is_buffered() ? m_buffer_usage == 0 : true; }
+    constexpr auto empty() const -> bool { return m_buffer_usage == 0; }
 
     constexpr auto have_receiver() const -> bool { return m_receive_sync != nullptr; }
 
-    constexpr void detach_receiver_impl() {
+    constexpr void fulfill_receiver(std::optional<T> value = std::nullopt) {
+        std::unique_lock lock {m_receive_sync->recv_mutex};
+        m_receive_sync->recv_fulfilled = m_receive_fulfill_id;
+        m_receive_sync->recv_cv.notify_all();
+        *m_receiver_buffer = value;
+
         m_receive_sync = nullptr;
         m_receiver_buffer = nullptr;
-        m_receiver_update_cv.notify_all();
+
+        m_cv_to_receivers.notify_all();
     }
 
     template<typename... Args>
     constexpr void emplace_immediately(Args&&... args) {
-        assume(N != 0);
-        std::construct_at(m_storage + m_read_head, std::forward<Args>(args)...);
+        size_t index = (m_read_head + m_buffer_usage) % (N + 1);
+        std::construct_at(m_storage + index, std::forward<Args>(args)...);
         ++m_buffer_usage;
     }
 
     constexpr auto pop_immediately() -> T {
-        assume(N != 0);
-
         T ret(std::move(m_storage[m_read_head]));
         std::destroy_at(m_storage + m_read_head);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdivision-by-zero"
-        ++m_read_head %= N;
+        ++m_read_head %= (N + 1);
 #pragma GCC diagnostic pop
         --m_buffer_usage;
 
