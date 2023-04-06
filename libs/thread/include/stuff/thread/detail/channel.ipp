@@ -30,23 +30,21 @@ constexpr auto channel<T, N, Allocator>::is_buffered() const -> bool {
 template<typename T, usize N, typename Allocator>
 constexpr void channel<T, N, Allocator>::close() {
     std::unique_lock lock{m_mutex};
+
+    if (have_receiver()) {
+        std::unique_lock sync_lock{m_receive_sync->recv_mutex};
+        m_receive_sync->recv_fulfilled = true;
+        *m_receiver_buffer = std::nullopt;
+        m_receive_sync->recv_cv.notify_all();
+        detach_receiver_impl();
+    }
+
     m_closed = true;
 }
 
 template<typename T, usize N, typename Allocator>
 template<typename... Args>
 constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
-    /*
-     * Semantic notes:
-     * 1) there can be at most one consumer on the channel
-     * 2) if the channel *was* closed before the send operation, the program must panic
-     * 3) if the channel is closed while waiting for the queue to empty, i have no clue what should happen
-     * 4) if the channel's buffer has empty space, the send operation mustn't block
-     * 5) if the channel's buffer is full, the send operation should block and wait for someone to start listening
-     *
-     * it does concern me how <- can never fail without panicking in Go; i wonder how Go handles case 3
-     */
-
     std::unique_lock lock{m_mutex};
 
     if (closed()) {
