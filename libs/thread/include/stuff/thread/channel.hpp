@@ -56,9 +56,9 @@ struct channel {
 
     /// Forcibly detaches a receiver
     void detach_receiver() {
-        std::unique_lock lock {m_mutex};
+        std::unique_lock lock{m_mutex};
         detach_receiver_impl();
-        m_receiver_ready_cv.notify_all();
+        m_receiver_update_cv.notify_all();
     }
 
 private:
@@ -68,8 +68,7 @@ private:
 
     mutable std::mutex m_mutex{};
 
-    std::condition_variable m_receiver_ready_cv{};
-    std::condition_variable m_emplace_complete_cv{};
+    std::condition_variable m_receiver_update_cv{};
 
     std::shared_ptr<detail::chan_receive_syncer> m_receive_sync = nullptr;
     usize m_receive_fulfill_id = 0;
@@ -90,6 +89,7 @@ private:
     constexpr void detach_receiver_impl() {
         m_receive_sync = nullptr;
         m_receiver_buffer = nullptr;
+        m_receiver_update_cv.notify_all();
     }
 
     template<typename... Args>
@@ -144,9 +144,7 @@ struct channel_selector final : detail::channel_selector_base {
 
     void fulfilled() final override { m_fn(m_recv_buffer); }
 
-    void fulfilled_by_someone_else() final override {
-        m_channel.detach_receiver();
-    }
+    void fulfilled_by_someone_else() final override { m_channel.detach_receiver(); }
 
 private:
     Channel& m_channel;
@@ -161,7 +159,8 @@ channel_selector(Channel&, Fn&&) -> channel_selector<Channel, std::decay_t<Fn>>;
 template<typename... Selectors>
 static void select(Selectors&&... selectors_arg);
 
-struct selector_builder {};
+template<typename Fn, typename... Selectors>
+static void select_with_default(Fn&& default_fn, Selectors&&... selectors_arg);
 
 }  // namespace stf
 

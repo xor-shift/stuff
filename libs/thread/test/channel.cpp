@@ -74,11 +74,11 @@ static void test_basic_consumer_producer(usize expected_recv_count) {
 }
 
 TEST(channel, test_0_unbuffered) {
-    test_basic_consumer_producer<0>(5);
+    test_basic_consumer_producer<0>(10);
 }
 
 TEST(channel, test_0_buffered) {
-    test_basic_consumer_producer<1>(10);
+    test_basic_consumer_producer<1>(20);
 }
 
 template<usize ChannelSize>
@@ -92,6 +92,7 @@ static void test_single_producer_multiple_consumer(usize expected_recv_count) {
         for (usize i = 0; i < expected_recv_count; i++) {
             std::cout << "[producer] pushing " << i << std::endl;
             channel.emplace_back(i);
+            std::this_thread::sleep_for(std::chrono::milliseconds(333));
         }
         channel.close();
         std::cout << "[producer] closing channel and exiting" << std::endl;
@@ -138,7 +139,7 @@ TEST(channel, test_2) {
     stf::channel<int, 0> chan_notifier{};
 
     std::thread producer{[&] {
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 25; i++) {
             std::cout << "[producer] pushing " << i << " to chan_" << (i % 2) << std::endl;
 
             if (i % 2 == 0) {

@@ -61,7 +61,7 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
 
     for (;;) {
         if (!have_receiver()) {
-            m_receiver_ready_cv.wait(lock, [this] { return have_receiver() || !full(); });
+            m_receiver_update_cv.wait(lock, [this] { return have_receiver() || !full(); });
         }
 
         // the wake-up was to notify that there's free buffer space available
@@ -91,8 +91,6 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
     m_receive_sync->recv_cv.notify_one();
     *m_receiver_buffer = T(std::forward<Args>(args)...);
 
-    m_emplace_complete_cv.notify_all();
-
     detach_receiver_impl();
 
     return true;
@@ -107,7 +105,7 @@ auto channel<T, N, Allocator>::attach_receiver(
     std::unique_lock lock{m_mutex};
 
     if (have_receiver()) {
-        m_receiver_ready_cv.wait(lock, [this] { return !have_receiver(); });
+        m_receiver_update_cv.wait(lock, [this] { return !have_receiver(); });
     }
 
     if (!empty()) {
@@ -121,7 +119,7 @@ auto channel<T, N, Allocator>::attach_receiver(
         // hint at the senders that they might be able to buffer data
         // DO NOT use notify_one. it gives a false impression that these wake-ups are any different from spurious
         // ones. the fact that the mutex is held by senders will sort out races between waiting emplace_back calls.
-        m_receiver_ready_cv.notify_all();
+        m_receiver_update_cv.notify_all();
 
         recv_sync->recv_fulfilled = id;
         recv_buffer = pop_immediately();
@@ -136,7 +134,7 @@ auto channel<T, N, Allocator>::attach_receiver(
     m_receive_sync = recv_sync;
     m_receiver_buffer = &recv_buffer;
 
-    m_receiver_ready_cv.notify_one();
+    m_receiver_update_cv.notify_all();
 
     return true;
 }
@@ -191,6 +189,16 @@ static void select(Selectors&&... selectors_arg) {
 
         selectors[i]->fulfilled_by_someone_else();
     }
+}
+
+template<typename Fn, typename... Selectors>
+static void select_with_default(Fn&& default_fn, Selectors&&... selectors_arg) {
+    detail::channel_selector_base* selectors[] = {(&selectors_arg)...};
+
+    auto recv_sync = std::make_shared<detail::chan_receive_syncer>();
+    std::unique_lock recv_lock{recv_sync->recv_mutex};
+
+
 }
 
 }  // namespace stf
