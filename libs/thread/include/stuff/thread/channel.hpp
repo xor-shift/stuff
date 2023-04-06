@@ -19,13 +19,7 @@ struct chan_receive_syncer {
 
 }  // namespace detail
 
-/*template<typename T, usize N, typename Allocator = std::allocator<T>>
-struct channel;
-
-template<typename T>
-struct channel<T, 0, void> {};*/
-
-template<typename T, usize N, typename Allocator = std::allocator<T>>
+template<typename T, usize N = 0, typename Allocator = std::allocator<T>>
 struct channel {
     using value_type = T;
     using allocator_type = Allocator;
@@ -58,7 +52,6 @@ struct channel {
     void detach_receiver() {
         std::unique_lock lock{m_mutex};
         detach_receiver_impl();
-        m_receiver_update_cv.notify_all();
     }
 
 private:
@@ -117,12 +110,15 @@ private:
 
 namespace detail {
 
+template<typename Ret>
 struct channel_selector_base {
+    using value_type = Ret;
+
     virtual constexpr ~channel_selector_base() = default;
 
     virtual auto attach(std::shared_ptr<detail::chan_receive_syncer> recv_sync, usize id) -> bool = 0;
 
-    virtual void fulfilled() = 0;
+    virtual auto fulfilled() -> Ret = 0;
 
     virtual void fulfilled_by_someone_else() = 0;
 };
@@ -130,7 +126,10 @@ struct channel_selector_base {
 }  // namespace detail
 
 template<typename Channel, typename Fn>
-struct channel_selector final : detail::channel_selector_base {
+struct channel_selector final
+    : detail::channel_selector_base<std::invoke_result_t<Fn, std::optional<typename Channel::value_type>>> {
+    using value_type = std::invoke_result_t<Fn, std::optional<typename Channel::value_type>>;
+
     template<typename Fnn>
     constexpr channel_selector(Channel& channel, Fnn&& fn)
         : m_channel(channel)
@@ -142,9 +141,15 @@ struct channel_selector final : detail::channel_selector_base {
         return m_channel.attach_receiver(recv_sync, m_recv_buffer, id);
     }
 
-    void fulfilled() final override {
-        m_fn(m_recv_buffer);
-        m_recv_buffer = std::nullopt;
+    auto fulfilled() -> value_type final override {
+        if constexpr (std::is_void_v<value_type>) {
+            m_fn(m_recv_buffer);
+            m_recv_buffer = std::nullopt;
+        } else {
+            value_type ret = m_fn(m_recv_buffer);
+            m_recv_buffer = std::nullopt;
+            return ret;
+        }
     }
 
     void fulfilled_by_someone_else() final override {
@@ -163,14 +168,19 @@ template<typename Channel, typename Fn>
 channel_selector(Channel&, Fn&&) -> channel_selector<Channel, std::decay_t<Fn>>;
 
 template<typename Fn>
-struct default_channel_selector final : detail::channel_selector_base {
+struct default_channel_selector final : detail::channel_selector_base<std::invoke_result_t<Fn>> {
+    using value_type = std::invoke_result_t<Fn>;
+
     template<typename Fnn>
     constexpr default_channel_selector(Fnn&& fn)
         : m_fn(std::forward<Fnn>(fn)) {}
 
-    auto attach(std::shared_ptr<detail::chan_receive_syncer>, usize) -> bool final override { return false; }
+    auto attach(std::shared_ptr<detail::chan_receive_syncer> sync, usize id) -> bool final override {
+        sync->recv_fulfilled = id;
+        return false;
+    }
 
-    void fulfilled() final override { m_fn(); }
+    auto fulfilled() -> value_type final override { return m_fn(); }
 
     void fulfilled_by_someone_else() final override {}
 
@@ -181,8 +191,8 @@ private:
 template<typename Fn>
 default_channel_selector(Fn&&) -> default_channel_selector<std::decay_t<Fn>>;
 
-template<typename... Selectors>
-static void select(Selectors&&... selectors_arg);
+template<typename Selector, typename... Selectors>
+static auto select(Selector&& selector_arg, Selectors&&... selectors_arg);
 
 }  // namespace stf
 

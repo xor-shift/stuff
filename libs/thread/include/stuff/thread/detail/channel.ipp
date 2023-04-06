@@ -30,16 +30,16 @@ constexpr auto channel<T, N, Allocator>::is_buffered() const -> bool {
 template<typename T, usize N, typename Allocator>
 constexpr void channel<T, N, Allocator>::close() {
     std::unique_lock lock{m_mutex};
+    m_closed = true;
 
     if (have_receiver()) {
         std::unique_lock sync_lock{m_receive_sync->recv_mutex};
         m_receive_sync->recv_fulfilled = true;
         *m_receiver_buffer = std::nullopt;
         m_receive_sync->recv_cv.notify_all();
-        detach_receiver_impl();
     }
 
-    m_closed = true;
+    detach_receiver_impl(); // moving this here cancels emplaces too
 }
 
 template<typename T, usize N, typename Allocator>
@@ -48,7 +48,8 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
     std::unique_lock lock{m_mutex};
 
     if (closed()) {
-        throw std::runtime_error("sending on a closed channel");
+        return false;
+        // throw std::runtime_error("sending on a closed channel");
     }
 
     // we can buffer instead of blocking
@@ -61,7 +62,13 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
 
     for (;;) {
         if (!have_receiver()) {
-            m_receiver_update_cv.wait(lock, [this] { return have_receiver() || !full(); });
+            m_receiver_update_cv.wait(lock, [this] {  //
+                return have_receiver() || !full() || m_closed;
+            });
+        }
+
+        if (m_closed) {
+            return false;
         }
 
         // the wake-up was to notify that there's free buffer space available
@@ -157,37 +164,57 @@ constexpr auto channel<T, N, Allocator>::pop_front() -> std::optional<T> {
     return recv_buffer;
 }
 
-template<typename... Selectors>
-static void select(Selectors&&... selectors_arg) {
-    detail::channel_selector_base* selectors[] = {(&selectors_arg)...};
+template<typename Selector, typename... Selectors>
+static auto select(Selector&& selector_arg, Selectors&&... selectors_arg) {
+    using value_type = typename std::decay_t<Selector>::value_type;
+
+    detail::channel_selector_base<value_type>* selectors[] = {&selector_arg, (&selectors_arg)...};
 
     auto recv_sync = std::make_shared<detail::chan_receive_syncer>();
     std::unique_lock recv_lock{recv_sync->recv_mutex};
 
-    for (usize i = 0; i < std::size(selectors); i++) {
-        if (selectors[i]->attach(recv_sync, i + 1)) {
+    usize attach_i = 0;
+
+    for (; attach_i < std::size(selectors); attach_i++) {
+        if (selectors[attach_i]->attach(recv_sync, attach_i + 1)) {
             continue;
         }
 
-        for (usize j = 0; j < i; j++) {
+        /*for (usize j = 0; j < i; j++) {
             selectors[j]->fulfilled_by_someone_else();
         }
 
-        selectors[i]->fulfilled();
-        return;
+        return selectors[i]->fulfilled();*/
+
+        break;
     }
 
-    recv_sync->recv_cv.wait(recv_lock, [&] { return recv_sync->recv_fulfilled; });
-    selectors[recv_sync->recv_fulfilled - 1]->fulfilled();
+    auto cancel_others = [&] (usize upto) {
+        for (usize i = 0; i < std::min(std::size(selectors), upto); i++) {
+            if (i == recv_sync->recv_fulfilled - 1) {
+                continue;
+            }
 
-    recv_lock.unlock();
-
-    for (usize i = 0; i < std::size(selectors); i++) {
-        if (i == recv_sync->recv_fulfilled - 1) {
-            continue;
+            selectors[i]->fulfilled_by_someone_else();
         }
+    };
 
-        selectors[i]->fulfilled_by_someone_else();
+    if (attach_i == std::size(selectors)) {
+        recv_sync->recv_cv.wait(recv_lock, [&] { return recv_sync->recv_fulfilled; });
+    }
+
+    if constexpr (std::is_void_v<value_type>) {
+        selectors[recv_sync->recv_fulfilled - 1]->fulfilled();
+
+        recv_lock.unlock();
+        cancel_others(attach_i);
+    } else {
+        auto res = selectors[recv_sync->recv_fulfilled - 1]->fulfilled();
+
+        recv_lock.unlock();
+        cancel_others(attach_i);
+
+        return res;
     }
 }
 
