@@ -17,11 +17,13 @@ struct chan_receive_syncer {
     std::condition_variable recv_cv{};
 };
 
+struct empty {};
+
 }  // namespace detail
 
 template<typename T, usize N = 0, typename Allocator = std::allocator<T>>
 struct channel {
-    using value_type = T;
+    using value_type = std::conditional_t<std::is_void_v<T>, detail::empty, T>;
     using allocator_type = Allocator;
 
     channel(allocator_type const& allocator = {});
@@ -33,7 +35,7 @@ struct channel {
     template<typename... Args>
     constexpr auto emplace_back(Args&&... args) -> bool;
 
-    constexpr auto pop_front() -> std::optional<T>;
+    constexpr auto pop_front() -> std::optional<value_type>;
 
     /// \remark
     /// The attacher MUST be holding the lock within recv_sync.
@@ -42,9 +44,11 @@ struct channel {
     /// If false and !recv_buffer, the channel is closed and no data can be received OR the recv_sync was already
     /// fulfilled.\n
     /// If false and !!recv_buffer, there was buffered data prepared.
-    auto
-    attach_receiver(std::shared_ptr<detail::chan_receive_syncer> recv_sync, std::optional<T>& recv_buffer, usize id = 1)
-      -> bool;
+    auto attach_receiver(
+      std::shared_ptr<detail::chan_receive_syncer> recv_sync,
+      std::optional<value_type>& recv_buffer,
+      usize id = 1
+    ) -> bool;
 
     /// Forcibly detaches a receiver
     void detach_receiver() {
@@ -68,7 +72,7 @@ private:
 
     std::shared_ptr<detail::chan_receive_syncer> m_receive_sync = nullptr;
     usize m_receive_fulfill_id = 0;
-    std::optional<T>* m_receiver_buffer = nullptr;
+    std::optional<value_type>* m_receiver_buffer = nullptr;
 
     usize m_read_head = 0;  // next read index
     usize m_buffer_usage = 0;
@@ -82,8 +86,8 @@ private:
 
     constexpr auto have_receiver() const -> bool { return m_receive_sync != nullptr; }
 
-    constexpr void fulfill_receiver(std::optional<T> value = std::nullopt) {
-        std::unique_lock lock {m_receive_sync->recv_mutex};
+    constexpr void fulfill_receiver(std::optional<value_type> value = std::nullopt) {
+        std::unique_lock lock{m_receive_sync->recv_mutex};
         m_receive_sync->recv_fulfilled = m_receive_fulfill_id;
         m_receive_sync->recv_cv.notify_all();
         *m_receiver_buffer = value;
@@ -97,13 +101,14 @@ private:
     template<typename... Args>
     constexpr void emplace_immediately(Args&&... args) {
         size_t index = (m_read_head + m_buffer_usage) % (N + 1);
-        std::construct_at(m_storage + index, std::forward<Args>(args)...);
+        if constexpr (!std::is_void_v<T>) {
+            std::construct_at(m_storage + index, std::forward<Args>(args)...);
+        }
         ++m_buffer_usage;
     }
 
-    constexpr auto pop_immediately() -> T {
-        T ret(std::move(m_storage[m_read_head]));
-        std::destroy_at(m_storage + m_read_head);
+    constexpr auto pop_immediately() -> value_type {
+        usize index = m_read_head;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdivision-by-zero"
@@ -111,7 +116,13 @@ private:
 #pragma GCC diagnostic pop
         --m_buffer_usage;
 
-        return ret;
+        if constexpr (!std::is_void_v<T>) {
+            value_type ret(std::move(m_storage[m_read_head]));
+            std::destroy_at(m_storage + index);
+            return ret;
+        } else {
+            return {};
+        }
     }
 };
 

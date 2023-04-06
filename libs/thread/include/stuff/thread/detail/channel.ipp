@@ -5,15 +5,21 @@ namespace stf {
 template<typename T, usize N, typename Allocator>
 channel<T, N, Allocator>::channel(allocator_type const& allocator)
     : m_allocator(allocator)
-    , m_storage(m_allocator.allocate(N + 1)) {}
+    , m_storage(nullptr) {
+    if constexpr (!std::is_void_v<T>) {
+        m_storage = m_allocator.allocate(N + 1);
+    }
+}
 
 template<typename T, usize N, typename Allocator>
 channel<T, N, Allocator>::~channel() noexcept {
     close();
 
-    if (m_storage != nullptr) {
-        m_allocator.deallocate(m_storage, N + 1);
-        m_storage = nullptr;
+    if constexpr (!std::is_void_v<T>) {
+        if (m_storage != nullptr) {
+            m_allocator.deallocate(m_storage, N + 1);
+            m_storage = nullptr;
+        }
     }
 }
 
@@ -78,7 +84,7 @@ constexpr auto channel<T, N, Allocator>::emplace_back(Args&&... args) -> bool {
 template<typename T, usize N, typename Allocator>
 auto channel<T, N, Allocator>::attach_receiver(
   std::shared_ptr<detail::chan_receive_syncer> recv_sync,
-  std::optional<T>& recv_buffer,
+  std::optional<value_type>& recv_buffer,
   usize id
 ) -> bool {
     // please excuse the comments, i am kind of dumb (very dumb) and can't keep track of everything without hints
@@ -130,9 +136,9 @@ auto channel<T, N, Allocator>::attach_receiver(
 }
 
 template<typename T, usize N, typename Allocator>
-constexpr auto channel<T, N, Allocator>::pop_front() -> std::optional<T> {
+constexpr auto channel<T, N, Allocator>::pop_front() -> std::optional<value_type> {
     auto recv_sync = std::make_shared<detail::chan_receive_syncer>();
-    std::optional<T> recv_buffer = std::nullopt;
+    std::optional<value_type> recv_buffer = std::nullopt;
 
     std::unique_lock recv_lock{recv_sync->recv_mutex};
 
