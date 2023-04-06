@@ -191,14 +191,4 @@ static void select(Selectors&&... selectors_arg) {
     }
 }
 
-template<typename Fn, typename... Selectors>
-static void select_with_default(Fn&& default_fn, Selectors&&... selectors_arg) {
-    detail::channel_selector_base* selectors[] = {(&selectors_arg)...};
-
-    auto recv_sync = std::make_shared<detail::chan_receive_syncer>();
-    std::unique_lock recv_lock{recv_sync->recv_mutex};
-
-
-}
-
 }  // namespace stf

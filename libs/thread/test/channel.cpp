@@ -208,3 +208,39 @@ TEST(channel, test_2) {
     consumer_0.join();
     consumer_1.join();
 }
+
+TEST(channel, test_3) {
+    //watchdog watchdog{std::chrono::seconds(1)};
+
+    stf::channel<int, 1> channel{};
+    channel.emplace_back(1);
+
+    int read_val = 0;
+    usize chan_read_ct = 0;
+    usize chan_close_ct = 0;
+    usize default_ct = 0;
+
+    stf::channel_selector selector_channel{
+      channel,
+      [&](std::optional<int> v) {
+          if (v) {
+              read_val = *v;
+              ++chan_read_ct;
+          } else {
+              ++chan_close_ct;
+          }
+      },
+    };
+
+    stf::default_channel_selector selector_default{[&] { ++default_ct; }};
+
+    stf::select(selector_default, selector_channel);
+    stf::select(selector_channel, selector_default);
+    channel.close();
+    stf::select(selector_channel, selector_default);
+
+    ASSERT_EQ(chan_read_ct, 1);
+    ASSERT_EQ(read_val, 1);
+    ASSERT_EQ(chan_close_ct, 1);
+    ASSERT_EQ(default_ct, 1);
+}

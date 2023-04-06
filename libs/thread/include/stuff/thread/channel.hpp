@@ -142,9 +142,15 @@ struct channel_selector final : detail::channel_selector_base {
         return m_channel.attach_receiver(recv_sync, m_recv_buffer, id);
     }
 
-    void fulfilled() final override { m_fn(m_recv_buffer); }
+    void fulfilled() final override {
+        m_fn(m_recv_buffer);
+        m_recv_buffer = std::nullopt;
+    }
 
-    void fulfilled_by_someone_else() final override { m_channel.detach_receiver(); }
+    void fulfilled_by_someone_else() final override {
+        m_channel.detach_receiver();
+        m_recv_buffer = std::nullopt;
+    }
 
 private:
     Channel& m_channel;
@@ -156,11 +162,27 @@ private:
 template<typename Channel, typename Fn>
 channel_selector(Channel&, Fn&&) -> channel_selector<Channel, std::decay_t<Fn>>;
 
+template<typename Fn>
+struct default_channel_selector final : detail::channel_selector_base {
+    template<typename Fnn>
+    constexpr default_channel_selector(Fnn&& fn)
+        : m_fn(std::forward<Fnn>(fn)) {}
+
+    auto attach(std::shared_ptr<detail::chan_receive_syncer>, usize) -> bool final override { return false; }
+
+    void fulfilled() final override { m_fn(); }
+
+    void fulfilled_by_someone_else() final override {}
+
+private:
+    Fn m_fn;
+};
+
+template<typename Fn>
+default_channel_selector(Fn&&) -> default_channel_selector<std::decay_t<Fn>>;
+
 template<typename... Selectors>
 static void select(Selectors&&... selectors_arg);
-
-template<typename Fn, typename... Selectors>
-static void select_with_default(Fn&& default_fn, Selectors&&... selectors_arg);
 
 }  // namespace stf
 
