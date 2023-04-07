@@ -68,8 +68,6 @@ auto channel_base<ValueType, N, T>::attach_receiver(
 ) -> bool {
     // please excuse the comments, i am kind of dumb (very dumb) and can't keep track of everything without hints
 
-    T& self = *static_cast<T*>(this);
-
     std::unique_lock lock{m_mutex};
 
     if (closed()) {
@@ -83,7 +81,7 @@ auto channel_base<ValueType, N, T>::attach_receiver(
     }
 
     if (have_receiver()) {
-        m_cv_to_receivers.wait(lock, [this, &self] { return !have_receiver() || closed(); });
+        m_cv_to_receivers.wait(lock, [this] { return !have_receiver() || closed(); });
 
         if (closed()) {
             recv_sync->recv_fulfilled = id;
