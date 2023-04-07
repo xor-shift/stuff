@@ -17,25 +17,28 @@ struct chan_receive_syncer {
     std::condition_variable recv_cv{};
 };
 
-struct empty {};
-
 }  // namespace detail
 
-template<typename T, usize N = 0, typename Allocator = std::allocator<T>>
-struct channel {
-    using value_type = std::conditional_t<std::is_void_v<T>, detail::empty, T>;
-    using allocator_type = Allocator;
+template<typename Selector, typename... Selectors>
+static auto select(Selector&& selector_arg, Selectors&&... selectors_arg);
 
-    channel(allocator_type const& allocator = {});
+template<typename Channel>
+static auto receive(Channel& chan) -> std::optional<typename Channel::value_type>;
 
-    ~channel() noexcept;
+template<typename Channel, typename... Args>
+static auto send(Channel& chan, Args&&... args) -> bool;
+
+template<typename ValueType, usize N, typename T>
+struct channel_base {
+    using value_type = ValueType;
+
+    friend T;
 
     constexpr void close();
 
+protected:
     template<typename... Args>
     constexpr auto emplace_back(Args&&... args) -> bool;
-
-    constexpr auto pop_front() -> std::optional<value_type>;
 
     /// \remark
     /// The attacher MUST be holding the lock within recv_sync.
@@ -50,22 +53,25 @@ struct channel {
       usize id = 1
     ) -> bool;
 
-    /// Forcibly detaches a receiver
-    void detach_receiver() {
-        std::unique_lock lock{m_mutex};
+    /// Cancels a receive (should only be used by select())
+    void detach_receiver();
 
-        m_receive_sync = nullptr;
-        m_receiver_buffer = nullptr;
+    template<typename Selector, typename... Selectors>
+    friend auto select(Selector&& selector_arg, Selectors&&... selectors_arg);
 
-        m_cv_to_receivers.notify_all();
-    }
+    template<typename Channel>
+    friend auto receive(Channel& chan) -> std::optional<typename Channel::value_type>;
+
+    template<typename Channel, typename... Args>
+    friend auto send(Channel& chan, Args&&... args) -> bool;
+
+    template<typename Channel, typename Fn>
+    friend struct channel_selector;
 
 private:
-    allocator_type m_allocator;
+    mutable std::mutex m_mutex{};
 
     bool m_closed = false;
-
-    mutable std::mutex m_mutex{};
 
     std::condition_variable m_cv_to_receivers{};
     std::condition_variable m_cv_to_senders{};
@@ -74,55 +80,73 @@ private:
     usize m_receive_fulfill_id = 0;
     std::optional<value_type>* m_receiver_buffer = nullptr;
 
-    usize m_read_head = 0;  // next read index
     usize m_buffer_usage = 0;
-    T* m_storage = nullptr;
 
-    constexpr auto closed() const -> bool { return m_closed; }
+    constexpr auto get_self() -> T& { return *static_cast<T*>(this); }
 
-    constexpr auto full() const -> bool { return m_buffer_usage == N + 1; }
+    constexpr auto get_self() const -> T const& { return *static_cast<const T*>(this); }
 
-    constexpr auto empty() const -> bool { return m_buffer_usage == 0; }
+    constexpr auto closed() const -> bool { return get_self().m_closed; }
 
-    constexpr auto have_receiver() const -> bool { return m_receive_sync != nullptr; }
+    constexpr auto full() const -> bool { return get_self().m_buffer_usage == N + 1; }
 
-    constexpr void fulfill_receiver(std::optional<value_type> value = std::nullopt) {
-        std::unique_lock lock{m_receive_sync->recv_mutex};
-        m_receive_sync->recv_fulfilled = m_receive_fulfill_id;
-        m_receive_sync->recv_cv.notify_all();
-        *m_receiver_buffer = value;
+    constexpr auto empty() const -> bool { return get_self().m_buffer_usage == 0; }
 
-        m_receive_sync = nullptr;
-        m_receiver_buffer = nullptr;
+    constexpr auto have_receiver() const -> bool { return get_self().m_receive_sync != nullptr; }
 
-        m_cv_to_receivers.notify_all();
-    }
+    constexpr void fulfill_receiver(std::optional<value_type> value = std::nullopt);
 
     template<typename... Args>
     constexpr void emplace_immediately(Args&&... args) {
-        size_t index = (m_read_head + m_buffer_usage) % (N + 1);
-        if constexpr (!std::is_void_v<T>) {
-            std::construct_at(m_storage + index, std::forward<Args>(args)...);
-        }
-        ++m_buffer_usage;
+        return get_self().emplace_immediately(std::forward<Args>(args)...);
+    }
+
+    constexpr auto pop_immediately() -> value_type { return get_self().pop_immediately(); }
+};
+
+template<typename T, usize N = 0, typename Allocator = std::allocator<T>>
+struct channel : channel_base<T, N, channel<T, N, Allocator>> {
+    using value_type = T;
+    using allocator_type = Allocator;
+
+    friend struct channel_base<T, N, channel<T, N, Allocator>>;
+
+    channel(allocator_type const& allocator = {});
+
+    ~channel() noexcept;
+
+private:
+    allocator_type m_allocator;
+
+    usize m_read_head = 0;  // next read index
+    T* m_storage = nullptr;
+
+    template<typename... Args>
+    constexpr void emplace_immediately(Args&&... args);
+
+    constexpr auto pop_immediately() -> value_type;
+};
+
+template<usize N, typename Allocator>
+struct channel<void, N, Allocator> : channel_base<empty, N, channel<void, N, Allocator>> {
+    using value_type = empty;
+    using allocator_type = Allocator;
+
+    friend struct channel_base<empty, N, channel<void, N, Allocator>>;
+
+    channel() = default;
+
+    ~channel() { this->close(); }
+
+private:
+    template<typename... Args>
+    constexpr void emplace_immediately(Args&&... args) {
+        ++this->m_buffer_usage;
     }
 
     constexpr auto pop_immediately() -> value_type {
-        usize index = m_read_head;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdivision-by-zero"
-        ++m_read_head %= (N + 1);
-#pragma GCC diagnostic pop
-        --m_buffer_usage;
-
-        if constexpr (!std::is_void_v<T>) {
-            value_type ret(std::move(m_storage[m_read_head]));
-            std::destroy_at(m_storage + index);
-            return ret;
-        } else {
-            return {};
-        }
+        --this->m_buffer_usage;
+        return {};
     }
 };
 
@@ -209,9 +233,10 @@ private:
 template<typename Fn>
 default_channel_selector(Fn&&) -> default_channel_selector<std::decay_t<Fn>>;
 
-template<typename Selector, typename... Selectors>
-static auto select(Selector&& selector_arg, Selectors&&... selectors_arg);
-
 }  // namespace stf
 
-#include <stuff/thread/detail/channel.ipp>
+#include <stuff/thread/detail/channel/channel_base.ipp>
+
+#include <stuff/thread/detail/channel/channel.ipp>
+
+#include <stuff/thread/detail/channel/select.ipp>

@@ -11,6 +11,11 @@ namespace stf {
 
 // this place is currently a dumping ground for uncategorized functions and types
 
+/// An analogue of Go's <code>struct {}</code> type\n
+/// Intended to be used with stf::channel. (a channel of T=void returns <code>empty</code> values (this is akin to
+/// <code>chan struct{}</code> from Go))
+struct empty {};
+
 template<usize Size>
 struct string_literal {
     char data[Size];

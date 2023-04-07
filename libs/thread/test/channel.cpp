@@ -48,7 +48,7 @@ static void test_basic_consumer_producer(usize expected_recv_count) {
     std::thread producer{[&] {
         for (usize i = 0; i < expected_recv_count; i++) {
             std::cout << "[producer] pushing " << i << std::endl;
-            channel.emplace_back(i);
+            send(channel, i);
         }
         channel.close();
         std::cout << "[producer] closing channel and exiting" << std::endl;
@@ -56,7 +56,7 @@ static void test_basic_consumer_producer(usize expected_recv_count) {
 
     std::thread consumer{[&] {
         for (;;) {
-            if (auto res = channel.pop_front(); res) {
+            if (auto res = receive(channel); res) {
                 ++recv_count;
                 std::cout << "[consumer] popped " << *res << std::endl;
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
@@ -91,7 +91,7 @@ static void test_single_producer_multiple_consumer(usize expected_recv_count) {
     std::thread producer_thread{[&] {
         for (usize i = 0; i < expected_recv_count; i++) {
             std::cout << "[producer] pushing " << i << std::endl;
-            channel.emplace_back(i);
+            send(channel, i);
             std::this_thread::sleep_for(std::chrono::milliseconds(333));
         }
         channel.close();
@@ -100,7 +100,7 @@ static void test_single_producer_multiple_consumer(usize expected_recv_count) {
 
     auto consumer = [&]<typename Rep, typename Period>(usize id, std::chrono::duration<Rep, Period> sleep_period) {
         for (;;) {
-            if (auto res = channel.pop_front(); res) {
+            if (auto res = receive(channel); res) {
                 ++recv_count;
                 std::cout << "[consumer " << id << "] popped " << *res << std::endl;
                 std::this_thread::sleep_for(sleep_period);
@@ -143,9 +143,9 @@ TEST(channel, test_2) {
             std::cout << "[producer] pushing " << i << " to chan_" << (i % 2) << std::endl;
 
             if (i % 2 == 0) {
-                chan_0.emplace_back(i);
+                send(chan_0, i);
             } else {
-                chan_1.emplace_back(i);
+                send(chan_1, i);
             }
         }
 
@@ -213,7 +213,7 @@ TEST(channel, test_3) {
     watchdog watchdog{std::chrono::seconds(1)};
 
     stf::channel<int, 1> channel{};
-    channel.emplace_back(1);
+    send(channel, 1);
 
     int read_val = 0;
     usize chan_read_ct = 0;
