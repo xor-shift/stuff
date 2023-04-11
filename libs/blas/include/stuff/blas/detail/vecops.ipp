@@ -177,11 +177,23 @@ constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto 
 }
 
 template<concepts::vector T, typename U>
+    requires (std::is_arithmetic_v<U>)
 constexpr auto clamp(T const& lhs, U min, U max) -> concepts::vector_like<T> auto {
     concepts::vector_backend auto ret = typename T::template rebind<>{};
 
     for (usize i = 0; i < T::size; i++) {
         ret[i] = std::clamp<typename T::value_type>(lhs[i], min, max);
+    }
+
+    return ret;
+}
+
+template<concepts::vector T, concepts::vector U, concepts::vector V>
+constexpr auto clamp(T const& lhs, U min, V max) -> concepts::vector_like<T> auto {
+    concepts::vector_backend auto ret = typename T::template rebind<>{};
+
+    for (usize i = 0; i < T::size; i++) {
+        ret[i] = std::clamp<typename T::value_type>(lhs[i], min[i], max[i]);
     }
 
     return ret;

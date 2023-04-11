@@ -46,6 +46,8 @@ struct vector {
     constexpr auto operator[](usize i) & -> T& { return m_data[i]; }
     constexpr auto operator[](usize i) const&& -> T const&& { return std::move(m_data[i]); }
     constexpr auto operator[](usize i) && -> T&& { return std::move(m_data[i]); }
+    constexpr auto data() -> T* { return m_data; }
+    constexpr auto data() const -> const T* { return m_data; }
 
 private:
     T m_data[Size];
@@ -171,7 +173,11 @@ template<concepts::vector T, concepts::vector U>
 constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T, typename U = typename T::value_type>
+    requires (std::is_arithmetic_v<U>)
 constexpr auto clamp(T const& lhs, U min, U max) -> concepts::vector_like<T> auto;
+
+template<concepts::vector T, concepts::vector U, concepts::vector V>
+constexpr auto clamp(T const& lhs, U min, V max) -> concepts::vector_like<T> auto;
 
 template<concepts::vector T>
 constexpr auto round(T const& lhs) -> concepts::vector_like<T> auto;

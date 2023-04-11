@@ -123,6 +123,8 @@ struct image {
 
     constexpr void fill(color c) { std::fill(m_data, m_data + m_width * m_height, c); }
 
+    constexpr auto get_color_space() const -> color_space { return m_color_space; }
+
     constexpr auto width() const -> u32 { return m_width; }
     constexpr auto height() const -> u32 { return m_height; }
     constexpr auto size() const -> u64 { return static_cast<u64>(width()) * static_cast<u64>(height()); }
