@@ -128,14 +128,32 @@ struct matrix {
     }
 
     static constexpr auto identity() -> concepts::nd_matrix_of_t<T, Rows, Cols> auto requires(Rows == Cols);
+
+    static constexpr auto rotate(T theta) -> matrix requires(Rows == Cols && Rows == 2);
+
+    /// Rotation matrix in 3 dimensions.
+    /// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
+    static constexpr auto rotate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 3);
+
+    /// Homogenous rotation matrix in 3 dimensions.
+    /// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
+    static constexpr auto rotate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
+
+    static constexpr auto scale(T x, T y) -> matrix requires(Rows == Cols && Rows == 2);
+    static constexpr auto scale(T x, T y) -> matrix requires(Rows == Cols && Rows == 3);
+    static constexpr auto scale(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 3);
+    static constexpr auto scale(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
+
+    static constexpr auto translate(T x, T y) -> matrix requires(Rows == Cols && Rows == 3);
+    static constexpr auto translate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
 };
 
 static_assert(concepts::matrix<matrix<int, 3, 4>>);
 static_assert(concepts::matrix_backend<matrix<int, 3, 4>>);
 
-template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
+/*template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
     requires concepts::matrix_backend<matrix_type<T, Size, Size>>
-constexpr auto identity_matrix() -> matrix_type<T, Size, Size>;
+constexpr auto identity_matrix() -> matrix_type<T, Size, Size>;*/
 
 template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
     requires concepts::matrix_backend<matrix_type<T, 2, 2>>
@@ -146,17 +164,6 @@ constexpr auto rotation_matrix(T theta) -> matrix_type<T, 2, 2>;
 template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
     requires concepts::matrix_backend<matrix_type<T, 3, 3>>
 constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3>;
-
-template<typename T>
-struct homogenous_transformation {
-    std::array<T, 3> rotation{0, 0, 0};
-    std::array<T, 3> scale{1, 1, 1};
-    std::array<T, 3> translation{0, 0, 0};
-};
-
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
-    requires concepts::matrix_backend<matrix_type<T, 4, 4>>
-constexpr auto homogeneous_transformation_matrix(homogenous_transformation<T> description) -> matrix_type<T, 4, 4>;
 
 /// @return
 /// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a

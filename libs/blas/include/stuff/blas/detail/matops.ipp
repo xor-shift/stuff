@@ -14,20 +14,33 @@ constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {
     return ret;
 }
 
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
-    requires concepts::matrix_backend<matrix_type<T, 2, 2>>
-constexpr auto rotation_matrix(T theta) -> matrix_type<T, 2, 2> {
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::identity()
+  -> concepts::nd_matrix_of_t<T, Rows, Cols> auto requires(Rows == Cols)  // this comment is here for clang-format
+{
+    matrix ret{};
+    for (usize i = 0; i < Rows; i++) {
+        ret[i][i] = 1;
+    }
+    return ret;
+}
+
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::rotate(T theta) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 2)
+{
     T s = static_cast<T>(std::sin(theta));
     T c = static_cast<T>(std::cos(theta));
 
-    matrix_type<T, 2, 2> ret{c, -s, s, c};
+    matrix<T, 2, 2> ret{c, -s, s, c};
+
+    return ret;
 }
 
-/// Rotation matrix in 3 dimensions.
-/// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
-    requires concepts::matrix_backend<matrix_type<T, 3, 3>>
-constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3> {
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::rotate(T x, T y, T z) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 3)
+{
     T xs = static_cast<T>(std::sin(x));
     T xc = static_cast<T>(std::cos(x));
     T ys = static_cast<T>(std::sin(y));
@@ -35,46 +48,93 @@ constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3> {
     T zs = static_cast<T>(std::sin(z));
     T zc = static_cast<T>(std::cos(z));
 
-    matrix_type<T, 3, 3> x_mat{1, 0, 0, 0, xc, -xs, 0, xs, xc};
-    matrix_type<T, 3, 3> y_mat{yc, 0, ys, 0, 1, 0, -ys, 0, yc};
-    matrix_type<T, 3, 3> z_mat{zc, -zs, 0, zs, zc, 0, 0, 0, 1};
+    matrix<T, 3, 3> x_mat{1, 0, 0, 0, xc, -xs, 0, xs, xc};
+    matrix<T, 3, 3> y_mat{yc, 0, ys, 0, 1, 0, -ys, 0, yc};
+    matrix<T, 3, 3> z_mat{zc, -zs, 0, zs, zc, 0, 0, 0, 1};
 
-    return z_mat * y_mat * x_mat;
+    return x_mat * y_mat * z_mat;
 }
 
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type>
-    requires concepts::matrix_backend<matrix_type<T, 4, 4>>
-constexpr auto homogeneous_transformation_matrix(homogenous_transformation<T> description) -> matrix_type<T, 4, 4> {
-    T rxs = static_cast<T>(std::sin(description.rotation[0]));
-    T rxc = static_cast<T>(std::cos(description.rotation[0]));
-    T rys = static_cast<T>(std::sin(description.rotation[1]));
-    T ryc = static_cast<T>(std::cos(description.rotation[1]));
-    T rzs = static_cast<T>(std::sin(description.rotation[2]));
-    T rzc = static_cast<T>(std::cos(description.rotation[2]));
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::rotate(T x, T y, T z) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 4)
+{
+    T xs = static_cast<T>(std::sin(x));
+    T xc = static_cast<T>(std::cos(x));
+    T ys = static_cast<T>(std::sin(y));
+    T yc = static_cast<T>(std::cos(y));
+    T zs = static_cast<T>(std::sin(z));
+    T zc = static_cast<T>(std::cos(z));
 
-    matrix_type<T, 4, 4> x_rot_mat{1, 0, 0, 0, /**/ 0, rxc, -rxs, 0, /**/ 0, rxs, rxc, 0, /**/ 0, 0, 0, 1};
-    matrix_type<T, 4, 4> y_rot_mat{ryc, 0, rys, 0, /**/ 0, 1, 0, 0, /**/ -rys, 0, ryc, 0, /**/ 0, 0, 0, 1};
-    matrix_type<T, 4, 4> z_rot_mat{rzc, -rzs, 0, 0, /**/ rzs, rzc, 0, 0, /**/ 0, 0, 1, 0, /**/ 0, 0, 0, 1};
+    matrix<T, 4, 4> x_mat{1, 0, 0, 0, /**/ 0, xc, -xs, 0, /**/ 0, xs, xc, 0, /**/ 0, 0, 0, 1};
+    matrix<T, 4, 4> y_mat{yc, 0, ys, 0, /**/ 0, 1, 0, 0, /**/ -ys, 0, yc, 0, /**/ 0, 0, 0, 1};
+    matrix<T, 4, 4> z_mat{zc, -zs, 0, 0, /**/ zs, zc, 0, 0, /**/ 0, 0, 1, 0, /**/ 0, 0, 0, 1};
 
-    // clang-format off
+    return x_mat * y_mat * z_mat;
+}
 
-    matrix_type<T, 4, 4> trans_mat{
-      1, 0, 0, description.translation[0],
-      0, 1, 0, description.translation[1],
-      0, 0, 1, description.translation[2],
-      0, 0, 0, 1,
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::scale(T x, T y) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 2)
+{
+    return matrix<T, 2, 2>{x, 0, 0, y};
+}
+
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::scale(T x, T y) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 3)
+{
+    return matrix<T, 3, 3>{
+      x, 0, 0,  //
+      0, y, 0,  //
+      0, 0, 1   //
     };
+}
 
-    matrix_type<T, 4, 4> scale_mat{
-      description.scale[0], 0, 0, 0,
-      0, description.scale[1], 0, 0,
-      0, 0, description.scale[2], 0,
-      0, 0, 0, 1,
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::scale(T x, T y, T z) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 3)
+{
+    return matrix<T, 3, 3>{
+      x, 0, 0,  //
+      0, y, 0,  //
+      0, 0, z   //
     };
+}
 
-    // clang-format on
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::scale(T x, T y, T z) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 4)
+{
+    return matrix<T, 4, 4>{
+      x, 0, 0, 0,  //
+      0, y, 0, 0,  //
+      0, 0, z, 0,  //
+      0, 0, 0, 1   //
+    };
+}
 
-    return trans_mat * scale_mat * x_rot_mat * y_rot_mat * z_rot_mat;
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::translate(T x, T y) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 3)
+{
+    return matrix<T, 3, 3>{
+      1, 0, x,  //
+      0, 1, y,  //
+      0, 0, 1   //
+    };
+}
+
+template<typename T, usize Rows, usize Cols>
+constexpr auto matrix<T, Rows, Cols>::translate(T x, T y, T z) -> matrix<T, Rows, Cols>
+    requires(Rows == Cols && Rows == 4)
+{
+    return matrix<T, 4, 4>{
+      1, 0, 0, x,  //
+      0, 1, 0, y,  //
+      0, 0, 1, z,  //
+      0, 0, 0, 1   //
+    };
 }
 
 namespace detail {
@@ -179,17 +239,6 @@ constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering 
         }
     }
 
-    return ret;
-}
-
-template<typename T, usize Rows, usize Cols>
-constexpr auto matrix<T, Rows, Cols>::identity()
-  -> concepts::nd_matrix_of_t<T, Rows, Cols> auto requires(Rows == Cols)  // this comment is here for clang-format
-{
-    matrix ret{};
-    for (usize i = 0; i < Rows; i++) {
-        ret[i][i] = 1;
-    }
     return ret;
 }
 
