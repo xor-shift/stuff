@@ -49,6 +49,13 @@ struct vector {
     constexpr auto data() -> T* { return m_data; }
     constexpr auto data() const -> const T* { return m_data; }
 
+    friend constexpr void swap(vector& lhs, vector& rhs) {
+        for (usize i = 0; i < Size; i++) {
+            using std::swap;
+            swap(lhs.m_data[i], rhs.m_data[i]);
+        }
+    }
+
 private:
     T m_data[Size];
 
@@ -58,7 +65,7 @@ private:
             m_data[i] = v;
             ++i;
         } else {
-            usize to_emit = std::min(V::size, Size - i - 1);
+            usize to_emit = std::min(V::size, Size - i);
             for (usize j = 0; j < to_emit; j++) {
                 m_data[i + j] = static_cast<T>(v[j]);
             }
