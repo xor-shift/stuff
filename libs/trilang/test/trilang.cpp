@@ -61,10 +61,10 @@ TEST(trilang, stl) {
     };
 
     stf::trilang::stl::binary_stream stream(std::begin(test_file), std::end(test_file));
-    std::vector<stf::trilang::stl::triangle<>> vec {};
+    std::vector<stf::trilang::stl::triangle> vec {};
 
     for (;;) {
-        std::optional<stf::trilang::stl::triangle<>> res = stream.next();
+        std::optional<stf::trilang::stl::triangle> res = stream.next();
         if (!res) {
             break;
         }

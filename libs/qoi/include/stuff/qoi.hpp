@@ -18,11 +18,11 @@ namespace stf::qoi {
 namespace detail {
 
 struct raw_header {
-    char magic[4];
-    u32 width;
-    u32 height;
-    u8 channels;
-    u8 colorspace;
+    char m_magic[4];
+    u32 m_width;
+    u32 m_height;
+    u8 m_channels;
+    u8 m_colorspace;
 };
 
 }  // namespace detail
@@ -38,10 +38,10 @@ enum class color_space : u8 {
 };
 
 struct header {
-    u32 width;
-    u32 height;
-    channels channels;
-    color_space color_space;
+    u32 m_width;
+    u32 m_height;
+    channels m_channels;
+    color_space m_color_space;
 };
 
 template<typename Allocator = std::allocator<color>>
