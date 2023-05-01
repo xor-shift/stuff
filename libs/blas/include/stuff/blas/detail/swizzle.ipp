@@ -1,8 +1,8 @@
 #pragma once
 
-namespace stf::blas {
+// swizzle helpers
 
-namespace detail {
+namespace stf::blas::detail {
 
 constexpr auto swizzle_index(char c) -> usize {
     switch (c) {
@@ -39,20 +39,3 @@ template<string_literal Lit, typename T>
 concept can_swizzle = concepts::vector<T> && (T::size >= swizzle_needed_dimensions<Lit>());
 
 }  // namespace detail
-
-template<string_literal Lit, concepts::vector T>
-constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto{
-    static_assert(detail::can_swizzle<Lit, T>);
-
-    concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto ret =
-      typename T::template rebind<typename T::value_type, Lit.size()>{};
-
-    for (usize i = 0; char c : Lit) {
-        usize index = detail::swizzle_index(c);
-        ret[i++] = vec[index];
-    }
-
-    return ret;
-}
-
-}

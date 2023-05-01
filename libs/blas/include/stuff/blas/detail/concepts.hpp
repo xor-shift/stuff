@@ -3,7 +3,6 @@
 #include <concepts>
 
 #include <stuff/core/integers.hpp>
-#include <stuff/core/type_traits.hpp>
 
 namespace stf::blas::concepts {
 
@@ -57,10 +56,10 @@ template<typename T, typename U>
 concept vector_of_t = vector<T> && std::is_same_v<typename T::value_type, U>;
 
 template<typename T, typename U, usize Dims>
-concept nd_vector_of_t = nd_vector<T, Dims> && vector_of_t<T, U>;
+concept generic_vector = nd_vector<T, Dims> && vector_of_t<T, U>;
 
 template<typename T, typename V>
-concept vector_like = vector<V> && nd_vector_of_t<T, typename V::value_type, V::size>;
+concept vector_like = vector<V> && generic_vector<T, typename V::value_type, V::size>;
 
 /// A mutable vector.
 template<typename T>
@@ -83,8 +82,8 @@ concept matrix =  //
       { T::cols } -> std::convertible_to<usize>;
       { std::integral_constant<usize, T::cols>::value } -> std::convertible_to<usize>;
 
-      { v[idx] } -> nd_vector_of_t<typename T::value_type, T::cols>;
-      { v.column(idx) } -> nd_vector_of_t<typename T::value_type, T::rows>;
+      { v[idx] } -> generic_vector<typename T::value_type, T::cols>;
+      { v.column(idx) } -> generic_vector<typename T::value_type, T::rows>;
 
       typename T::template preferred_vector_type<typename T::value_type, T::cols>;
 

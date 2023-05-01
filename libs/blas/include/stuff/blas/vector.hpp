@@ -3,6 +3,13 @@
 #include <stuff/blas/detail/concepts.hpp>
 #include <stuff/core.hpp>
 
+#include <cmath>
+#include <functional>
+
+#ifndef STF_BLAS_INCLUDE_FUNCTIONS_FOR_PLAIN_VECTOR
+# define STF_BLAS_INCLUDE_FUNCTIONS_FOR_PLAIN_VECTOR 0
+#endif
+
 namespace stf::blas {
 
 template<typename T, usize Size>
@@ -48,6 +55,10 @@ struct vector {
     constexpr auto operator[](usize i) && -> T&& { return std::move(m_data[i]); }
     constexpr auto data() -> T* { return m_data; }
     constexpr auto data() const -> const T* { return m_data; }
+    constexpr auto begin() -> T* { return data(); }
+    constexpr auto begin() const -> const T* { return data(); }
+    constexpr auto end() -> T* { return data() + size; }
+    constexpr auto end() const -> const T* { return data() + size; }
 
     friend constexpr void swap(vector& lhs, vector& rhs) {
         for (usize i = 0; i < Size; i++) {
@@ -90,136 +101,13 @@ constexpr auto get(vector<T, Size> const& vec) -> typename vector<T, Size>::valu
     return vec[I];
 }
 
-static_assert(concepts::vector<vector<int, 3>>);
-
-/// @return
-/// The dot product between <code>lhs</code> and <code>rhs</code>.
-/// Return type is determined based on promotion rules.
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto dot(T const& lhs, U const& rhs)
-  -> core::type_promotion_t<typename T::value_type, typename U::value_type>;
-
-/// @return
-/// The cross product of <code>lhs</code> and <code>rhs</code> or a
-/// vector-expression equivalent to it.
-/// Only valid for spaces of R³ and R⁷.
-template<concepts::vector T, concepts::vector U>
-constexpr auto cross(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-/// @return
-/// The negation of <code>v</code> or a vector-expression equivalent to it.
-template<concepts::vector T>
-constexpr auto operator-(T const& v) -> concepts::vector_like<T> auto;
-
-/// @return
-/// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a
-/// vector-expression equivalent to it.
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-/// @return
-/// The elementwise subtraction of <code>lhs</code> and <code>rhs</code> or a
-/// vector-expression equivalent to it.
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto operator/(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, typename U>
-    requires std::is_arithmetic_v<U>
-constexpr auto operator/(T const& lhs, U rhs) -> concepts::vector_like<T> auto;
-
-template<typename T, concepts::vector U>
-    requires std::is_arithmetic_v<T>
-constexpr auto operator/(T lhs, U const& rhs) -> concepts::vector_like<U> auto;
-
-template<concepts::vector T, typename U>
-    requires std::is_arithmetic_v<U>
-constexpr auto operator*(T const& lhs, U rhs) -> concepts::vector_like<T> auto;
-
-template<typename T, concepts::vector U>
-    requires std::is_arithmetic_v<T>
-constexpr auto operator*(T lhs, U const& rhs) -> concepts::vector_like<U> auto;
-
-template<concepts::vector T>
-constexpr auto abs(T const& v) -> typename T::value_type;
-
-template<concepts::vector T>
-constexpr auto elem_abs(T const& v) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T>
-constexpr auto normalize(T const& v) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto less_than(T const& lhs, U const& rhs) -> concepts::nd_vector_of_t<bool, T::size> auto;
-
-template<concepts::vector T, concepts::vector U, concepts::vector V>
-    requires(T::size == U::size && U::size == V::size)
-constexpr auto mix(T const& lhs, U const& rhs, V const& param) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U, typename V>
-    requires(T::size == U::size && std::is_arithmetic_v<V>)
-constexpr auto mix(T const& lhs, U const& rhs, V param) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto min(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U>
-    requires(T::size == U::size)
-constexpr auto max(T const& lhs, U const& rhs) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, typename U = typename T::value_type>
-    requires (std::is_arithmetic_v<U>)
-constexpr auto clamp(T const& lhs, U min, U max) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T, concepts::vector U, concepts::vector V>
-constexpr auto clamp(T const& lhs, U min, V max) -> concepts::vector_like<T> auto;
-
-template<concepts::vector T>
-constexpr auto round(T const& lhs) -> concepts::vector_like<T> auto;
-
-/// @return
-/// The elementwise comparison of <code>lhs</code> and <code>rhs</code>.\n
-/// If all elements of <code>lhs</code> are in the same relation to the corresponding elements in <code>rhs</code>
-/// some std::partial_ordering inequivalent to std::partial_ordering::unordered is returned, otherwise
-/// std::partial_ordering::unordered is returned.\n
-/// if T::size != U::size, std::partial_ordering::unordered is returned.\n
-/// Not recommended for vectors of floating-point value_type.\n
-template<concepts::vector T, concepts::vector U>
-constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering;
-
-/// Checks the equality of two vectors; <code>lhs</code> and <code>rhs</code>.
-/// Not recommended for vectors of floating-point value_type.
-constexpr auto operator==(concepts::vector auto const& lhs, concepts::vector auto const& rhs) -> bool {
-    return lhs <=> rhs == std::partial_ordering::equivalent;
-}
-
-/// GLSL-like vector swizzling.\n
-/// x, r, and s correspond to index 0\n
-/// y, g, and t correspond to index 1\n
-/// z, b, and p correspond to index 2\n
-/// w, a, and q correspond to index 3\n
-/// Unlike GLSL, assignment to swizzles are not allowed\n
-/// @return
-/// The swizzled vector.
-/// @example
-/// <pre>static_assert(swizzle\<"wztsrgzw">(vector\<int, 4>{0,1,2,3}) == vector\<int, 8>{3,2,1,0,0,1,2,3})</pre>
-template<string_literal Lit, concepts::vector T>
-constexpr auto swizzle(T const& vec) -> concepts::nd_vector_of_t<typename T::value_type, Lit.size()> auto;
+static_assert(concepts::generic_vector<vector<int, 3>, int, 3>);
+static_assert(concepts::vector_backend<vector<int, 3>>);
 
 }  // namespace stf::blas
 
-#include <stuff/blas/detail/vecops.ipp>
-#include <stuff/blas/detail/vecops_binary.ipp>
-#include <stuff/blas/detail/vecops_swizzle.ipp>
+# include <stuff/blas/detail/generic_vec/generic_vec_ops.hpp>
+
+#if STF_BLAS_INCLUDE_FUNCTIONS_FOR_PLAIN_VECTOR
+# include <stuff/blas/detail/plain_vec/plain_vec_ops.hpp>
+#endif

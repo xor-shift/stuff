@@ -2,8 +2,6 @@
 
 #include <gtest/gtest.h>
 
-using namespace stf::integers;
-
 template<template<typename T, usize Size> class vector>
     requires(stf::blas::concepts::vector_backend<vector<int, 3>>)
 void test_vector_type() {

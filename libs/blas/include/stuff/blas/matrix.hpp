@@ -82,11 +82,11 @@ struct vector_matrix_adapter {
 
     Vector const& m_vec;
 
-    constexpr auto operator[](usize i) const -> concepts::nd_vector_of_t<value_type, 1> auto{
+    constexpr auto operator[](usize i) const -> concepts::generic_vector<value_type, 1> auto{
         return typename Vector::template rebind<value_type, 1>{m_vec[i]};
     }
 
-    constexpr auto column(usize i) const -> concepts::nd_vector_of_t<value_type, rows> auto{ return m_vec; }
+    constexpr auto column(usize i) const -> concepts::generic_vector<value_type, rows> auto{ return m_vec; }
 };
 
 static_assert(concepts::matrix<vector_matrix_adapter<vector<int, 3>>>);

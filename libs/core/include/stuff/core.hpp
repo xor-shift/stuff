@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stuff/core/integers.hpp>
-#include <stuff/core/type_traits.hpp>
 
 #include <algorithm>
 #include <iterator>
