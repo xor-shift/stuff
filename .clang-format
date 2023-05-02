@@ -19,6 +19,7 @@ PointerAlignment: Left
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLambdasOnASingleLine: All
+AllowShortFunctionsOnASingleLine: All
 ContinuationIndentWidth: 2
 AlignOperands: AlignAfterOperator
 AlignAfterOpenBracket: BlockIndent

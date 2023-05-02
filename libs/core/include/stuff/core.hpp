@@ -31,6 +31,43 @@ struct string_literal {
     constexpr auto c_str() const& -> const char* { return data; }
 };
 
+template<typename... Ts>
+struct bunch_of_types;
+
+template<typename T, typename... Ts>
+struct bunch_of_types<T, Ts...> {
+    static constexpr usize size = 1uz + sizeof...(Ts);
+
+private:
+    template<usize I>
+    struct nth_type_helper;
+
+    template<usize I>
+        requires(I < size)
+    struct nth_type_helper<I> {
+        using type = typename bunch_of_types<Ts...>::template nth_type<I - 1>;
+    };
+
+    template<>
+    struct nth_type_helper<0> {
+        using type = T;
+    };
+
+public:
+    template<usize I>
+        requires(I < size)
+    using nth_type = typename nth_type_helper<I>::type;
+};
+
+template<typename T>
+struct bunch_of_types<T> {
+    static constexpr usize size = 1uz;
+
+    template<usize I>
+        requires(I == 0)
+    using nth_type = T;
+};
+
 template<typename... Funcs>
 struct multi_visitor : public Funcs... {
     using Funcs::operator()...;
