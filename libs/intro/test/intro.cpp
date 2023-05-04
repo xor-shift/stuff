@@ -1,3 +1,5 @@
+#include <stuff/intro/detail/aggregate/tie.hpp>
+
 #include <stuff/intro.hpp>
 
 #include <gtest/gtest.h>
@@ -121,6 +123,7 @@ TEST(intro, basic_span) {
     ASSERT_EQ(sum_0, 6);
 }
 
+#include <stuff/intro/detail/aggregate/member_types.hpp>
 #include <stuff/intro/introspectors/unordered_map.hpp>
 
 TEST(intro, basic_umap) {
@@ -139,47 +142,18 @@ TEST(intro, basic_umap) {
     ASSERT_EQ(umap_0, umap_1);
 }
 
+using stf::intro::detail::agg::make_reference_like;
+using stf::intro::arity_v;
+
+
 template<typename T>
-inline auto aggregate_member_helper(std::integral_constant<usize, 5>) {
-    std::unreachable();
-    auto&& [a, b, c, d, e] = *static_cast<std::remove_cvref_t<T>*>(reinterpret_cast<void*>(static_cast<uintptr_t>(1)));
-    return stf::bunch_of_types<decltype(a), decltype(b), decltype(c), decltype(d), decltype(e)>{};
+    requires (arity_v<std::remove_cvref_t<T>> == 5)
+inline auto tie_members(T&& v) {
+    auto&& [a, b, c, d, e] = v;
+    return std::forward_as_tuple(static_cast<typename make_reference_like<T, decltype(a)>::type>(a), static_cast<typename make_reference_like<T, decltype(b)>::type>(b), static_cast<typename make_reference_like<T, decltype(c)>::type>(c), static_cast<typename make_reference_like<T, decltype(d)>::type>(d), static_cast<typename make_reference_like<T, decltype(e)>::type>(e));
 }
 
-TEST(intro, sagg_playground) {
-    int v = 0;
-    struct test_struct {
-        int a;
-        int& b;
-        int const& c;
-        int&& d;
-        int const&& e;
-    } asd{
-      .a = v,
-      .b = v,
-      .c = v,
-      .d = std::move(v),
-      .e = std::move(v),
-    };
-
-    auto&& [a, b, c, d, e] = asd;
-
-    static_assert(std::is_same_v<decltype(a), int>);
-    static_assert(std::is_same_v<decltype(b), int&>);
-    static_assert(std::is_same_v<decltype(c), int const&>);
-    static_assert(std::is_same_v<decltype(d), int&&>);
-    static_assert(std::is_same_v<decltype(e), int const&&>);
-
-    using struct_types = decltype(aggregate_member_helper<test_struct>({}));
-
-    static_assert(std::is_same_v<struct_types::nth_type<0>, int>);
-    static_assert(std::is_same_v<struct_types::nth_type<1>, int&>);
-    static_assert(std::is_same_v<struct_types::nth_type<2>, int const&>);
-    static_assert(std::is_same_v<struct_types::nth_type<3>, int&&>);
-    static_assert(std::is_same_v<struct_types::nth_type<4>, int const&&>);
-}
-
-TEST(intro, sagg_types) {
+TEST(intro, basic_sagg) {
     struct test_struct_0 {
         int a;
         int& b;
@@ -187,4 +161,8 @@ TEST(intro, sagg_types) {
         int&& d;
         int const&& e;
     };
+    int a = 0;
+    test_struct_0 foo{a, a, a, std::move(a), std::move(a)};
+    auto tied = tie_members(foo);
+    static_assert(std::is_same_v<decltype(tied), std::tuple<int&, int&, int const&, int&&, int const&&>>);
 }

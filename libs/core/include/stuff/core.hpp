@@ -79,7 +79,7 @@ multi_visitor(Funcs&&...) -> multi_visitor<Funcs...>;
 /// A macro to check if a function exists with certain arguments.
 /// @example
 /// <pre>static_assert(STF_FUNC_EXISTS(__builtin_fabsf, 0.f)); // this, most, likely passes</pre>
-/// <pre>static_assert(STF_FUNC_EXISTS(__builtin_fabsf)); // this, most, likely fails</pre>
+/// <pre>static_assert(STF_FUNC_EXISTS(__builtin_fabsf)); // this, most likely, fails</pre>
 /// <pre>static_assert(!STF_FUNC_EXISTS(ksdvjbjksdfv, 0.f)); // this, most likely, fails</pre>
 #define STF_FUNC_EXISTS(_name, ...)                                                                               \
     ([]<typename... Args>(Args&&... args) {                                                                       \
