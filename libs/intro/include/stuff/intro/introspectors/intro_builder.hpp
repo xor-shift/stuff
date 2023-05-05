@@ -20,7 +20,7 @@ struct built_field {
 template<string_literal ToFind>
 struct named_field_finder {
     template<typename Field>
-    struct predicate : std::bool_constant<true> {};
+    struct predicate : std::bool_constant<ToFind == Field::field_name> {};
 };
 
 }  // namespace detail

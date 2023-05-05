@@ -249,8 +249,13 @@ TEST(intro, intro_builder) {
     ASSERT_EQ(intro::get<1>(sq), 9);
     ASSERT_EQ(intro::get<"area">(sq), 9);
 
-    ASSERT_EQ(intro::get<0>(square{4}), 4);
+    ASSERT_EQ(intro::get<0>(square{4}), 4);                               // const lvalue
+    ASSERT_EQ(intro::get<0>(square{4}) = 4, 4);                           // rvalue
+    ASSERT_EQ(intro::get<0>(static_cast<const square&&>(square{4})), 4);  // const rvalue
     ASSERT_EQ(intro::get<"side_length">(square{4}), 4);
+
     ASSERT_EQ(intro::get<1>(square{4}), 16);
+    // ASSERT_EQ(intro::get<1>(square{4}) = 4, 16); // won't work, read-only field
+    ASSERT_EQ(intro::get<1>(static_cast<const square&&>(square{4})), 16);
     ASSERT_EQ(intro::get<"area">(square{4}), 16);
 }

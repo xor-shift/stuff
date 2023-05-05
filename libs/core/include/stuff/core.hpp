@@ -29,6 +29,21 @@ struct string_literal {
     constexpr auto end() const& -> const char* { return &data[size()]; }
 
     constexpr auto c_str() const& -> const char* { return data; }
+
+    template<usize OtherSize>
+    friend constexpr auto operator==(string_literal const& self, string_literal<OtherSize> const& other) -> bool {
+        if constexpr (OtherSize != Size) {
+            return false;
+        }
+
+        for (usize i = 0; i < Size; i++) {
+            if (other.data[i] != self.data[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 };
 
 template<typename... Ts>
