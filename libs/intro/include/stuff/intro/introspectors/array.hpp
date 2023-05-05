@@ -5,7 +5,7 @@
 
 #include <array>
 
-namespace stf::intro::detail {
+namespace stf::intro {
 
 template<typename T, usize N>
 struct array_introspector {
@@ -86,14 +86,14 @@ static_assert(concepts::array_introspector<array_introspector<int, 3>>);
 
 template<typename T, usize N>
 constexpr auto _stf_adl_introspector(const T (&)[N]) {
-    return ::stf::intro::detail::array_introspector<T, N>{};
+    return ::stf::intro::array_introspector<T, N>{};
 }
 
 namespace std {
 
 template<typename T, usize N>
 constexpr auto _stf_adl_introspector(std::array<T, N> const&) {
-    return ::stf::intro::detail::array_introspector<T, N>{};
+    return ::stf::intro::array_introspector<T, N>{};
 }
 
 }  // namespace std

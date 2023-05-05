@@ -131,7 +131,8 @@ concept span_introspector =  //
 
       Intro::size(lval);
 
-      typename detail::get_helper<Intro, 5>;  // 5 is a good™ value, but it should work for any I
+      // actually, why get<> for spans??
+      // typename detail::get_helper<Intro, 5>;  // 5 is a good™ value, but it should work for any I
 
       // clang-format off
       { Intro::index(std::declval<typename Intro::intro_type>(), i) } -> std::same_as<typename Intro::value_type &&>;

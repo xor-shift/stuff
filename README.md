@@ -11,6 +11,7 @@ Stuff© Libraries™ is a poorly made set of utilities inspired by boost.
 - `core`: A dumping ground for uncategorized utilities
 - `expected`: A `std::expected` implementation (not fully standards compliant, made to be simple
   and [to compile with clang 15](https://github.com/llvm/llvm-project/issues/45614))
+- `intro`: A customisable™ type introspection library with OOB aggregate introspection.
 - `paeno`: Compile time Paeno arithmetic
 - `qoi`: A QOI en/decoder, not very fast (includes a lossy encoder)
 - `random`: Random number generation utilities (all constexpr, to hell with erand48)

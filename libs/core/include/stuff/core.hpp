@@ -34,9 +34,15 @@ struct string_literal {
 template<typename... Ts>
 struct bunch_of_types;
 
+template<typename... Ts>
+    requires(sizeof...(Ts) == 0)
+struct bunch_of_types<Ts...> {
+    static constexpr usize size = 0;
+};
+
 template<typename T, typename... Ts>
 struct bunch_of_types<T, Ts...> {
-    static constexpr usize size = 1uz + sizeof...(Ts);
+    inline static constexpr usize size = 1uz + sizeof...(Ts);
 
 private:
     template<usize I>
@@ -57,6 +63,26 @@ public:
     template<usize I>
         requires(I < size)
     using nth_type = typename nth_type_helper<I>::type;
+
+private:
+    template<usize I, template<typename> typename Predicate, bool = Predicate<typename nth_type_helper<I>::type>::value>
+    struct find_type_helper;
+
+    template<usize I, template<typename> typename Predicate>
+    struct find_type_helper<I, Predicate, true> : std::integral_constant<usize, I> {};
+
+    template<template<typename> typename Predicate>
+    struct find_type_helper<size - 1, Predicate, false> : std::integral_constant<usize, size> {
+        // static_assert(!std::is_same_v<Predicate<T>, Predicate<T>>, "predicate not satisfied for any of the types");
+    };
+
+    template<usize I, template<typename> typename Predicate>
+    struct find_type_helper<I, Predicate, false>
+        : find_type_helper<I + 1, Predicate, Predicate<nth_type<I + 1>>::value> {};
+
+public:
+    template<template<typename> typename Predicate>
+    using find_type = typename find_type_helper<0, Predicate>::type;
 };
 
 template<typename T>
@@ -66,6 +92,10 @@ struct bunch_of_types<T> {
     template<usize I>
         requires(I == 0)
     using nth_type = T;
+
+    template<template<typename> typename Predicate>
+    using find_type =
+      std::conditional_t<Predicate<T>::value, std::integral_constant<usize, 0>, std::integral_constant<usize, 1>>;
 };
 
 template<typename... Funcs>
