@@ -82,3 +82,11 @@ concept tuple_serializer =  //
   };
 
 }  // namespace stf::serde::concepts
+
+namespace stf::serde {
+
+template<typename Serializer, typename T>
+constexpr auto serialize(Serializer&& serializer, T&& v)
+  -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
+
+}

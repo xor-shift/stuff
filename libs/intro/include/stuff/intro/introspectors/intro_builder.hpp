@@ -146,6 +146,7 @@ static_assert(([] constexpr->bool {
 
     using intro_0 = stf::intro::intro_builder<square>::quick_build<"a", "b", "c", "d", "e", "f">;
     static_assert(stf::intro::concepts::tuple_introspector<intro_0>);
+    static_assert(stf::intro::concepts::named_tuple_introspector<intro_0>);
 
     static_assert(std::is_same_v<intro_0::nth_type<0>, int>);
     static_assert(std::is_same_v<intro_0::nth_type<1>, const int>);

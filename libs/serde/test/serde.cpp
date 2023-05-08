@@ -1,7 +1,6 @@
 #include <stuff/intro/introspectors/array.hpp>
+#include <stuff/intro/introspectors/unordered_map.hpp>
 #include <stuff/intro/introspectors/intro_builder.hpp>
-
-#include <stuff/serde.hpp>
 
 #include <gtest/gtest.h>
 
@@ -11,7 +10,9 @@ struct bar_t {
     double c;
 };
 
-constexpr auto _stf_adl_introspector() { return stf::intro::intro_builder<bar_t>::quick_build<"a", "b", "c">{}; }
+constexpr auto _stf_adl_introspector(bar_t const&) { return stf::intro::intro_builder<bar_t>::quick_build<"a", "b", "c">{}; }
+
+#include <stuff/serde.hpp>
 
 TEST(serde, sandbox_0) {
     std::string str{};
@@ -75,6 +76,15 @@ TEST(serde, sandbox_0) {
     };
 
     stf::serde::serialize(serializer, bar);
-    ASSERT_EQ(str, "[0,3.1415925,3.1415926]");
+    ASSERT_EQ(str, "{\"a\":0,\"b\":3.1415925,\"c\":3.1415926}");
+    str.clear();
+
+    std::map<std::string_view, int> map_0 {
+      {"a", 0},
+      {"b", 1},
+      {"c", 2},
+    };
+    stf::serde::serialize(serializer, map_0);
+    ASSERT_EQ(str, "{\"a\":0,\"b\":1,\"c\":2}");
     str.clear();
 }

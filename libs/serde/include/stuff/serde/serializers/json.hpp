@@ -56,6 +56,8 @@ struct json_serializer_base {
         return serialize_seq(N);
     }
 
+    constexpr auto serialize_map(std::optional<usize>) -> stf::expected<serialize_map_type, error_type>;
+
 private:
     Allocator m_allocator;
     OIt& m_it;
@@ -143,7 +145,7 @@ struct json_array_serializer : json_serializer_base<json_array_serializer<OIt, O
         }
         ++m_counter;
 
-        return _stf_adl_serialize(*this, static_cast<Elem const&>(elem));
+        return serialize(*this, static_cast<Elem const&>(elem));
     }
 
     constexpr auto end() -> return_type { return this->emit_char(']') ? return_type{} : stf::unexpected{"buffer overrun"}; }
@@ -168,6 +170,27 @@ struct json_object_serializer : json_serializer_base<json_object_serializer<OIt,
     constexpr json_object_serializer(OIt& it, OItEnd end, Allocator const& alloc = Allocator{})  //
       noexcept(noexcept(Allocator(alloc)) && noexcept(Allocator()))
         : base_type(it, end, alloc) {}
+
+    template<typename Key, typename Value>
+    constexpr auto serialize_entry(Key const& key, Value&& value) -> return_type {
+        if (m_counter > 0) {
+            this->emit_char(',') ? return_type{} : stf::unexpected{"buffer overrun"};
+        }
+        ++m_counter;
+
+        TRYX(serialize(*this, key));
+        if (!this->emit_char(':')) {
+            return stf::unexpected{"buffer overrun"};
+        }
+        TRYX(serialize(*this, std::forward<Value>(value)));
+
+        return {};
+    }
+
+    constexpr auto end() -> return_type { return this->emit_char('}') ? return_type{} : stf::unexpected{"buffer overrun"}; }
+
+private:
+    usize m_counter = 0;
 };
 
 template<typename Extender, typename OIt, std::sentinel_for<OIt> OItEnd, typename Allocator>
@@ -175,6 +198,13 @@ constexpr auto json_serializer_base<Extender, OIt, OItEnd, Allocator>::serialize
     using U = stf::expected<serialize_seq_type, error_type>;
 
     return this->emit_char('[') ? U{json_array_serializer(m_it, m_end, m_allocator)} : stf::unexpected{"buffer overrun"};
+}
+
+template<typename Extender, typename OIt, std::sentinel_for<OIt> OItEnd, typename Allocator>
+constexpr auto json_serializer_base<Extender, OIt, OItEnd, Allocator>::serialize_map(std::optional<usize>) -> stf::expected<serialize_map_type, error_type> {
+    using U = stf::expected<serialize_map_type, error_type>;
+
+    return this->emit_char('{') ? U{serialize_map_type(m_it, m_end, m_allocator)} : stf::unexpected{"buffer overrun"};
 }
 
 static_assert(concepts::serializer<json_serializer<std::back_insert_iterator<std::string>, std::unreachable_sentinel_t>>);

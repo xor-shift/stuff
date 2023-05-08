@@ -21,6 +21,7 @@ template<typename Serializer, typename T, typename Intro>
 struct intro_serializer;
 
 template<typename Serializer, typename T, intro::concepts::span_introspector Intro>
+    requires(!intro::concepts::map_introspector<Intro>)
 struct intro_serializer<Serializer, T, Intro> {
     constexpr auto operator()(Serializer&& serializer, T&& v)
       -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type> {
@@ -39,7 +40,7 @@ struct intro_serializer<Serializer, T, Intro> {
 };
 
 template<typename Serializer, typename T, intro::concepts::tuple_introspector Intro>
-    requires(!intro::concepts::span_introspector<Intro>)
+    requires(!intro::concepts::span_introspector<Intro> && !intro::concepts::named_tuple_introspector<Intro>)
 struct intro_serializer<Serializer, T, Intro> {
     using return_type = stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
 
@@ -64,13 +65,57 @@ private:
     }
 };
 
+template<typename Serializer, typename T, intro::concepts::map_introspector Intro>
+struct intro_serializer<Serializer, T, Intro> {
+    using return_type = stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
+
+    constexpr auto operator()(Serializer&& serializer, T&& v) -> return_type {
+        auto map_ser = TRYX(serializer.serialize_map(Intro::size(v)));
+
+        auto beg = Intro::begin(v);
+        auto end = Intro::end(v);
+        for (auto it = beg; it != end; it++) {
+            TRYX(map_ser.serialize_entry(it->first, it->second));
+        }
+
+        return map_ser.end();
+    }
+};
+
+template<typename Serializer, typename T, intro::concepts::named_tuple_introspector Intro>
+struct intro_serializer<Serializer, T, Intro> {
+    using return_type = stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
+
+    constexpr auto operator()(Serializer&& serializer, T&& v) -> return_type {
+        auto map_ser = TRYX(serializer.serialize_map(Intro::size()));
+
+        TRYX(impl(map_ser, std::forward<T>(v)));
+
+        return map_ser.end();
+    }
+
+private:
+    template<typename MapSerializer, usize I = 0>
+    constexpr auto impl(MapSerializer&& serializer, T&& v) -> return_type {
+        std::string_view key = Intro::template nth_name<I>.c_str();
+        TRYX(serializer.serialize_entry(key, Intro::template get<I>(std::forward<T>(v))));
+
+        if constexpr (I + 1 >= Intro::size()) {
+            return {};
+        } else {
+            return impl<MapSerializer, I + 1>(std::forward<MapSerializer>(serializer), std::forward<T>(v));
+        }
+    }
+};
+
 template<typename Serializer, typename T>
 struct serializer_fn;
 
 template<typename Serializer, typename T>
     requires intro::has_introspector<std::remove_cvref_t<T>> && (!adl_serializable<T, Serializer>)
 struct serializer_fn<Serializer, T> {
-    constexpr auto operator()(Serializer&& serializer, T&& v) {
+    constexpr auto operator()(Serializer&& serializer, T&& v)
+      -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type> {
         using intro_type = intro::introspector_t<std::remove_cvref_t<T>>;
         return intro_serializer<Serializer, T, intro_type>{}(std::forward<Serializer>(serializer), std::forward<T>(v));
     }
@@ -78,14 +123,18 @@ struct serializer_fn<Serializer, T> {
 
 template<typename Serializer, adl_serializable<Serializer> T>
 struct serializer_fn<Serializer, T> {
-    constexpr auto operator()(Serializer&& serializer, T&& v) { _stf_adl_serialize(std::forward<Serializer>(serializer), std::forward<T>(v)); }
+    constexpr auto operator()(Serializer&& serializer, T&& v)
+      -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type> {
+        return _stf_adl_serialize(std::forward<Serializer>(serializer), std::forward<T>(v));
+    }
 };
 
 }  // namespace detail
 
 template<typename Serializer, typename T>
-constexpr auto serialize(Serializer&& serializer, T&& v) {
-    detail::serializer_fn<Serializer, T>{}(std::forward<Serializer>(serializer), std::forward<T>(v));
+constexpr auto serialize(Serializer&& serializer, T&& v)
+  -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type> {
+    return detail::serializer_fn<Serializer, T>{}(std::forward<Serializer>(serializer), std::forward<T>(v));
 }
 
 }  // namespace stf::serde

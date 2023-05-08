@@ -88,13 +88,10 @@ TEST(intro, basic_umap) {
         static_assert(std::is_same_v<V, int>);
     });
 
-    intro_0::iterate(
-      std::move(static_cast<std::remove_cvref_t<decltype(umap_0)> const&>(umap_0)),
-      []<typename K, typename V>(K&&, V&&) {
-          static_assert(std::is_same_v<K, std::string_view const&>);
-          static_assert(std::is_same_v<V, const int>);
-      }
-    );
+    intro_0::iterate(std::move(static_cast<std::remove_cvref_t<decltype(umap_0)> const&>(umap_0)), []<typename K, typename V>(K&&, V&&) {
+        static_assert(std::is_same_v<K, std::string_view const&>);
+        static_assert(std::is_same_v<V, const int>);
+    });
 }
 
 template<typename T0, typename T1>
@@ -272,7 +269,7 @@ TEST(intro, intro_builder_quick_build) {
 
     static_assert(stf::intro::arity_v<test_struct> == 3);
 
-    test_struct s {
+    test_struct s{
       .a = 1,
       .b = 2.3f,
       .c = 4.5,
