@@ -40,6 +40,16 @@ struct array_introspector {
     static constexpr auto end(std::array<T, N>& v) -> T* { return v.end(); }
     static constexpr auto end(std::array<T, N>&& v) -> T* { return v.end(); }
 
+    static constexpr auto index(const T (&v)[N], usize i) -> T const& { return v[i]; }
+    static constexpr auto index(const T (&&v)[N], usize i) -> T const&& { return std::move(v)[i]; }
+    static constexpr auto index(T (&v)[N], usize i) -> T& { return v[i]; }
+    static constexpr auto index(T (&&v)[N], usize i) -> T&& { return std::move(v)[i]; }
+
+    static constexpr auto index(std::array<T, N> const& v, usize i) -> T const& { return v[i]; }
+    static constexpr auto index(std::array<T, N> const&& v, usize i) -> T const&& { return std::move(v)[i]; }
+    static constexpr auto index(std::array<T, N>& v, usize i) -> T& { return v[i]; }
+    static constexpr auto index(std::array<T, N>&& v, usize i) -> T&& { return std::move(v)[i]; }
+
     template<usize I>
     static constexpr auto get(const T (&v)[N]) -> T const& {
         return v[I];
@@ -81,8 +91,9 @@ struct array_introspector {
 };
 
 static_assert(concepts::array_introspector<array_introspector<int, 3>>);
+static_assert(concepts::span_introspector<array_introspector<int, 3>>);
 
-}  // namespace stf::intro::detail
+}  // namespace stf::intro
 
 template<typename T, usize N>
 constexpr auto _stf_adl_introspector(const T (&)[N]) {

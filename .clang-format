@@ -14,7 +14,7 @@ BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: false
 NamespaceIndentation: None
-ColumnLimit: 120
+ColumnLimit: 180
 PointerAlignment: Left
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false

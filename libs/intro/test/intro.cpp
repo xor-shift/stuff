@@ -227,35 +227,61 @@ TEST(intro, intro_builder) {
         int sl;
     };
 
-    using intro = stf::intro::intro_builder<square>                                                 //
+    using intro_0 = stf::intro::intro_builder<square>                                               //
       ::add_field<int, "side_length", decltype([]<typename T>(T && v) -> auto&& { return v.sl; })>  //
       ::add_field<const int, "area", decltype([]<typename T>(T&& v) -> float { return v.sl * v.sl; })>;
 
-    static_assert(stf::intro::concepts::tuple_introspector<intro>);
+    static_assert(stf::intro::concepts::tuple_introspector<intro_0>);
 
     square sq{
       .sl = 2,
     };
 
-    ASSERT_EQ(intro::get<0>(sq), 2);
-    ASSERT_EQ(intro::get<"side_length">(sq), 2);
-    ASSERT_EQ(intro::get<1>(sq), 4);
-    ASSERT_EQ(intro::get<"area">(sq), 4);
+    ASSERT_EQ(intro_0::get<0>(sq), 2);
+    ASSERT_EQ(intro_0::get<"side_length">(sq), 2);
+    ASSERT_EQ(intro_0::get<1>(sq), 4);
+    ASSERT_EQ(intro_0::get<"area">(sq), 4);
 
-    intro::get<0>(sq) = 3;
+    intro_0::get<0>(sq) = 3;
 
-    ASSERT_EQ(intro::get<0>(sq), 3);
-    ASSERT_EQ(intro::get<"side_length">(sq), 3);
-    ASSERT_EQ(intro::get<1>(sq), 9);
-    ASSERT_EQ(intro::get<"area">(sq), 9);
+    ASSERT_EQ(intro_0::get<0>(sq), 3);
+    ASSERT_EQ(intro_0::get<"side_length">(sq), 3);
+    ASSERT_EQ(intro_0::get<1>(sq), 9);
+    ASSERT_EQ(intro_0::get<"area">(sq), 9);
 
-    ASSERT_EQ(intro::get<0>(square{4}), 4);                               // const lvalue
-    ASSERT_EQ(intro::get<0>(square{4}) = 4, 4);                           // rvalue
-    ASSERT_EQ(intro::get<0>(static_cast<const square&&>(square{4})), 4);  // const rvalue
-    ASSERT_EQ(intro::get<"side_length">(square{4}), 4);
+    ASSERT_EQ(intro_0::get<0>(square{4}), 4);                               // const lvalue
+    ASSERT_EQ(intro_0::get<0>(square{4}) = 4, 4);                           // rvalue
+    ASSERT_EQ(intro_0::get<0>(static_cast<const square&&>(square{4})), 4);  // const rvalue
+    ASSERT_EQ(intro_0::get<"side_length">(square{4}), 4);
 
-    ASSERT_EQ(intro::get<1>(square{4}), 16);
-    // ASSERT_EQ(intro::get<1>(square{4}) = 4, 16); // won't work, read-only field
-    ASSERT_EQ(intro::get<1>(static_cast<const square&&>(square{4})), 16);
-    ASSERT_EQ(intro::get<"area">(square{4}), 16);
+    ASSERT_EQ(intro_0::get<1>(square{4}), 16);
+    // ASSERT_EQ(intro_0::get<1>(square{4}) = 4, 16); // won't work, read-only field
+    ASSERT_EQ(intro_0::get<1>(static_cast<const square&&>(square{4})), 16);
+    ASSERT_EQ(intro_0::get<"area">(square{4}), 16);
+}
+
+TEST(intro, intro_builder_quick_build) {
+    struct test_struct {
+        int a;
+        float b;
+        double c;
+    };
+
+    using intro_0 = stf::intro::intro_builder<test_struct>::quick_build<"a", "b", "c">;
+    static_assert(stf::intro::concepts::tuple_introspector<intro_0>);
+
+    static_assert(stf::intro::arity_v<test_struct> == 3);
+
+    test_struct s {
+      .a = 1,
+      .b = 2.3f,
+      .c = 4.5,
+    };
+
+    ASSERT_EQ(intro_0::get<0>(s), 1);
+    ASSERT_EQ(intro_0::get<"a">(s), 1);
+    ASSERT_EQ(intro_0::get<1>(s), 2.3f);
+    ASSERT_EQ(intro_0::get<"b">(s), 2.3f);
+    ASSERT_EQ(intro_0::get<2>(s), 4.5);
+    ASSERT_EQ(intro_0::get<"c">(s), 4.5);
 }

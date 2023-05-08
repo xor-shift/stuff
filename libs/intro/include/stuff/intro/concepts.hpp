@@ -77,16 +77,36 @@ template<typename Intro>
              }
 struct get_helper<Intro, 0>;
 
+template<typename Intro, usize I>
+    requires requires { Intro::template nth_name<I>; } &&  //
+             (Intro::template named_field<Intro::template nth_name<I>> == I)
+struct name_helper_single;
+
+template<typename Intro, usize I>
+struct name_helper;
+
+template<typename Intro, usize I>
+    requires requires {
+                 typename name_helper_single<Intro, I>;
+                 typename name_helper<Intro, I - 1>;
+             }
+struct name_helper<Intro, I>;
+
+template<typename Intro>
+    requires requires {
+                 typename name_helper_single<Intro, 0>;  //
+             }
+struct name_helper<Intro, 0>;
+
 }  // namespace detail
 
-//
 template<typename Intro>
 concept tuple_introspector =  //
   requires(
-    typename Intro::intro_type& lval,
-    typename Intro::intro_type&& rval,
-    const typename Intro::intro_type& clval,
-    const typename Intro::intro_type&& crval
+    typename Intro::intro_type& lval,         //
+    typename Intro::intro_type&& rval,        //
+    const typename Intro::intro_type& clval,  //
+    const typename Intro::intro_type&& crval  //
   ) {
       typename Intro::intro_type;  // not necessarily the only type that can be introspected using `Intro`
 
@@ -97,33 +117,26 @@ concept tuple_introspector =  //
       typename detail::get_helper<Intro, Intro::size() - 1>;  // this will also check for `nth_type`
   };
 
-// a compile-time usize-indexable introspector
 template<typename Intro>
-concept array_introspector =  //
+concept named_tuple_introspector =  //
+  tuple_introspector<Intro> &&      //
   requires(
-    typename Intro::intro_type& lval,
-    typename Intro::intro_type&& rval,
-    const typename Intro::intro_type& clval,
-    const typename Intro::intro_type&& crval
+    typename Intro::intro_type& lval,         //
+    typename Intro::intro_type&& rval,        //
+    const typename Intro::intro_type& clval,  //
+    const typename Intro::intro_type&& crval  //
   ) {
-      typename Intro::intro_type;  // not necessarily the only type that can be introspected using `Intro`
-      typename Intro::value_type;
-
-      Intro::size();
-      Intro::size(lval);
-      std::integral_constant<usize, Intro::size()>{};  // constexpr-ness check
-
-      typename detail::get_helper<Intro, Intro::size() - 1>;  // this will also check for `nth_type`
+      typename detail::name_helper<Intro, Intro::size() - 1>;  // this will also check for `nth_type`
   };
 
 // a runtime usize-indexable introspector
 template<typename Intro>
 concept span_introspector =  //
   requires(
-    typename Intro::intro_type& lval,
-    typename Intro::intro_type&& rval,
-    const typename Intro::intro_type& clval,
-    const typename Intro::intro_type&& crval,
+    typename Intro::intro_type& lval,          //
+    typename Intro::intro_type&& rval,         //
+    const typename Intro::intro_type& clval,   //
+    const typename Intro::intro_type&& crval,  //
     usize i
   ) {
       typename Intro::intro_type;  // not necessarily the only type that can be introspected using `Intro`
@@ -131,15 +144,23 @@ concept span_introspector =  //
 
       Intro::size(lval);
 
-      // actually, why get<> for spans??
-      // typename detail::get_helper<Intro, 5>;  // 5 is a good™ value, but it should work for any I
-
       // clang-format off
       { Intro::index(std::declval<typename Intro::intro_type>(), i) } -> std::same_as<typename Intro::value_type &&>;
       { Intro::index(std::declval<typename Intro::intro_type&>(), i) } -> std::same_as<typename Intro::value_type &>;
       { Intro::index(std::declval<const typename Intro::intro_type>(), i) } -> std::convertible_to<typename Intro::value_type const &&>;
       { Intro::index(std::declval<typename Intro::intro_type const&>(), i) } -> std::convertible_to<typename Intro::value_type const&>;
       // clang-format on
+  };
+
+// a compile-time usize-indexable introspector
+template<typename Intro>
+concept array_introspector =   //
+  span_introspector<Intro> &&  //
+  requires() {
+      Intro::size();
+      std::integral_constant<usize, Intro::size()>{};  // constexpr-ness check
+
+      typename detail::get_helper<Intro, Intro::size() - 1>;  // this will also check for `nth_type`
   };
 
 }  // namespace concepts
