@@ -1,4 +1,4 @@
-namespace stf::intro::detail::agg::tie_helpers {
+namespace stf::intro::detail::tie_helpers {
 template<typename T>
 constexpr auto f(T&& _v, std::integral_constant<usize, 1>) {
     auto&& [a] = _v;
