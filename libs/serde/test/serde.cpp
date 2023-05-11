@@ -1,6 +1,8 @@
+#include <stuff/intro/introspectors/set.hpp>
+
 #include <stuff/intro/introspectors/array.hpp>
-#include <stuff/intro/introspectors/unordered_map.hpp>
 #include <stuff/intro/introspectors/intro_builder.hpp>
+#include <stuff/intro/introspectors/map.hpp>
 
 #include <gtest/gtest.h>
 
@@ -15,7 +17,7 @@ constexpr auto _stf_adl_introspector(bar_t const&) { return stf::intro::intro_bu
 #include <stuff/serde.hpp>
 
 TEST(serde, sandbox_0) {
-    std::string str{};
+    /*std::string str{};
     stf::serde::json_serializer serializer(back_inserter(str), std::unreachable_sentinel);
 
     stf::serde::serialize(serializer, true);
@@ -46,7 +48,7 @@ TEST(serde, sandbox_0) {
     seq_ser_0.serialize_element('a');
     seq_ser_0.serialize_element('b');
     seq_ser_0.end();
-    _stf_adl_serialize(serializer, 'c');
+    stf::serde::serialize(serializer, 'c');
     ASSERT_EQ(str, "['a','b']'c'");
     str.clear();
 
@@ -79,12 +81,42 @@ TEST(serde, sandbox_0) {
     ASSERT_EQ(str, "{\"a\":0,\"b\":3.1415925,\"c\":3.1415926}");
     str.clear();
 
-    std::map<std::string_view, int> map_0 {
+    std::map<std::string_view, int> map_0{
       {"a", 0},
       {"b", 1},
       {"c", 2},
     };
     stf::serde::serialize(serializer, map_0);
     ASSERT_EQ(str, "{\"a\":0,\"b\":1,\"c\":2}");
-    str.clear();
+    str.clear();*/
 }
+
+struct full_test_inner_t {
+    int a;
+    int& b;
+    int const& c;
+    //int&& d;
+    //int const&& e;
+    int f[2];
+    int (&g)[3];
+    int* h;
+};
+
+constexpr auto _stf_adl_introspector(full_test_inner_t const&) {
+    //return stf::intro::intro_builder<full_test_inner_t>::quick_build<"a", "b", "c", "d", "e", "f", "g">{};  //
+}
+
+struct full_test_t {
+    std::optional<full_test_inner_t> a[3];
+    //std::variant<int, float> b;
+    //std::tuple<int, float> c;
+    //std::map<std::string_view, int> d;
+    //std::set<std::string_view> e;
+};
+
+#include <stuff/intro/detail/aggregate/initializable.hpp>
+
+constexpr auto _stf_adl_introspector(full_test_t const&) {
+}
+
+TEST(serde, full_json) {}

@@ -50,15 +50,12 @@ concept serializer =  //
 
       // should support all types supported by `serialize_*`
       // should ideally call ADL-serialize at some point
-      // ser.serialize_some(int());
-      // ser.serialize_none();
+      ser.serialize_optional(std::optional<int>{});
 
-      // clang-format off
       { ser.serialize_seq(std::optional<usize>{}) } -> std::convertible_to<stf::expected<typename T::serialize_seq_type, typename T::error_type>>;
       { ser.template serialize_tuple<0uz>() } -> std::convertible_to<stf::expected<typename T::serialize_tuple_type, typename T::error_type>>;
-      //{ ser.template serialize_map<std::string_view, int>(usize{}) } -> std::convertible_to<stf::expected<typename T::serialize_map_type, typename T::error_type>>;
-      //{ ser.template serialize_struct<std::array<int, 3>, intro::introspector_t<std::array<int, 3>>>() } -> std::convertible_to<stf::expected<typename T::serialize_struct_type, typename T::error_type>>;
-      // clang-format on
+      { ser.template serialize_map<std::string_view, int>(usize{}) } -> std::convertible_to<stf::expected<typename T::serialize_map_type, typename T::error_type>>;
+      //{ ser.template serialize_struct<..., intro::introspector_t<...>>() } -> std::convertible_to<stf::expected<typename T::serialize_struct_type, typename T::error_type>>;
   };
 
 template<typename T>
@@ -78,6 +75,16 @@ concept tuple_serializer =  //
       typename T::error_type;
 
       { ser.serialize_element(int()) } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
+      { ser.end() } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
+  };
+
+template<typename T>
+concept map_serializer =  //
+  requires(T& ser) {
+      typename T::value_type;
+      typename T::error_type;
+
+      { ser.serialize_entry(std::string_view{}, int()) } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
       { ser.end() } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
   };
 

@@ -1,73 +1,90 @@
 #pragma once
 
-#include <stuff/intro/detail/aggregate/initializable_multipart_n.hpp>
+#include "./config.hpp"
 
-namespace stf::intro::detail::agg {
+#include <stuff/intro/detail/aggregate/initializable_multipart.hpp>
 
-namespace detail {
+namespace stf::intro::detail {
 
-template<typename T, usize Index>
-struct member_length_predicate {
-    template<usize Length>
-    struct predicate
-        : std::bool_constant<initializable_multipart_n_v<
-            T,
-            Index,
-            Length,
-            // (>= is needed because > makes the parser think that we're concluding the template parameters)
-            Index + Length + 1 >= faux_arity_v<T> ? 0 : faux_arity_v<T> - Index - Length>> {};
-};
+template<aggregate T, usize Index>
+inline static constexpr bool member_is_initializer_list = initializable_n_multipart<T, Index, 2, faux_arity<T> - 1 - Index>;
 
-}  // namespace detail
-
-/// \tparam N
-/// The index to check (should be the start of a member)
-template<typename T, usize Index>
-inline constexpr usize member_length_v =
-  binary_search<detail::member_length_predicate<T, Index>::template predicate, 1, faux_arity_v<T>>::type::value;
-
+#if STF_INTRO_RUN_CT_TESTS
 namespace ct_tests {
 
-static_assert(([] constexpr->bool {
-    struct Anon {
-        int& a;
-        int b[2];
-        int c;
-        int d;
-    };
-
-    // illustration for the linear search for the member lengths
-
-    static_assert(detail::member_length_predicate<Anon, 0>::predicate<1>::value);
-    // member at idx 0 is 1 long (2 -> false)
-    static_assert(!detail::member_length_predicate<Anon, 0>::predicate<2>::value);
-    static_assert(detail::member_length_predicate<Anon, 1>::predicate<1>::value);
-    static_assert(detail::member_length_predicate<Anon, 1>::predicate<2>::value);
-    // member at idx 1 is 2 long (3 -> false)
-    static_assert(!detail::member_length_predicate<Anon, 1>::predicate<3>::value);
-    static_assert(detail::member_length_predicate<Anon, 3>::predicate<1>::value);
-    // member at idx 3 is 1 long (2 -> false)
-    static_assert(!detail::member_length_predicate<Anon, 3>::predicate<2>::value);
-    static_assert(detail::member_length_predicate<Anon, 4>::predicate<1>::value);
-    // member at idx 4 is 1 long (2 -> false)
-    static_assert(!detail::member_length_predicate<Anon, 4>::predicate<2>::value);
-    // index 5 is >= faux_arity, terminate
-
-    static_assert(initializable_multipart_n_v<Anon, 0, 1, 4>);
-
-    static_assert(member_length_v<Anon, 0> == 1);
-    static_assert(member_length_v<Anon, 1> == 2);
-    static_assert(member_length_v<Anon, 2> == 1);
-    static_assert(member_length_v<Anon, 3> == 1);
-
-    /*static_assert(member_length_v<Anon, 0> == 0);
-    static_assert(member_length_v<Anon, 1> == 2);
-    static_assert(member_length_v<Anon, 2> == 1);
-    static_assert(member_length_v<Anon, 3> == 1);*/
+static_assert(([]() {
+    static_assert(!member_is_initializer_list<has_il, 0>);
+    static_assert(!member_is_initializer_list<has_il, 1>);
+    static_assert(member_is_initializer_list<has_il, 2>);
+    static_assert(!member_is_initializer_list<has_il, 3>);
 
     return true;
 })());
 
-}
+}  // namespace ct_tests
+#endif
 
-}  // namespace stf::intro::detail::agg
+template<aggregate T, usize Index>
+struct member_length_predicate {
+    template<usize Len>
+    inline static constexpr usize rest = Index + Len >= faux_arity<T> ? 0 : faux_arity<T> - Index - Len;
+
+    template<usize Len>
+    struct predicate : std::bool_constant<initializable_n_multipart<T, Index, Len, rest<Len>>> {};
+};
+
+template<aggregate T, usize Index>
+struct member_length_helper;
+
+/*template<aggregate T, usize Index>
+    requires member_is_initializer_list<T, Index>
+struct member_length_helper<T, Index> : std::integral_constant<usize, 1> {};*/
+
+template<aggregate T, usize Index>
+    requires(!member_is_initializer_list<T, Index>)
+struct member_length_helper<T, Index> {
+    inline static constexpr usize upto = faux_arity<T> - Index + 1;
+    inline static constexpr usize raw = forward_search<member_length_predicate<T, Index>::template predicate, 2, upto>::value;
+    inline static constexpr usize value = raw == upto ? 1 : raw;
+};
+
+template<aggregate T, usize Index>
+static constexpr usize member_length = member_length_helper<T, Index>::value;
+
+#if STF_INTRO_RUN_CT_TESTS
+namespace ct_tests {
+
+static_assert(([]() {
+    static_assert(member_length_predicate<test_struct_simple, 4>::predicate<2>::value);
+    static_assert(member_length_helper<test_struct_simple, 4>::upto == 3);
+    static_assert(member_length_helper<test_struct_simple, 4>::raw == 2);
+    static_assert(member_length<test_struct_simple, 0> == 1);
+    static_assert(member_length<test_struct_simple, 1> == 1);
+    static_assert(member_length<test_struct_simple, 2> == 1);
+    static_assert(member_length<test_struct_simple, 3> == 1);
+    static_assert(member_length<test_struct_simple, 4> == 2);
+
+    static_assert(faux_arity<test_struct_inner> == 13);
+    static_assert(!member_length_predicate<test_struct_inner, 9>::predicate<2>::value);
+    static_assert(!member_length_predicate<test_struct_inner, 9>::predicate<3>::value);
+    static_assert(member_length_predicate<test_struct_inner, 9>::predicate<4>::value);
+    static_assert(!initializable_n_multipart<test_struct_inner, 9, 2, 2>);
+    static_assert(!initializable_n_multipart<test_struct_inner, 9, 3, 1>);
+    static_assert(initializable_n_multipart<test_struct_inner, 9, 4, 0>);
+    static_assert(member_length<test_struct_inner, 0> == 1);
+    static_assert(member_length<test_struct_inner, 1> == 1);
+    static_assert(member_length<test_struct_inner, 2> == 1);
+    static_assert(member_length<test_struct_inner, 3> == 1);
+    static_assert(member_length<test_struct_inner, 4> == 1);
+    static_assert(member_length<test_struct_inner, 5> == 2);
+    static_assert(member_length<test_struct_inner, 7> == 1);
+    static_assert(member_length<test_struct_inner, 8> == 1);
+    static_assert(member_length<test_struct_inner, 9> == 4);
+
+    return true;
+})());
+
+}  // namespace ct_tests
+#endif
+
+}  // namespace stf::intro::detail

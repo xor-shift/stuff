@@ -1,48 +1,50 @@
 #pragma once
 
+#include "./config.hpp"
+
 #include <stuff/intro/detail/aggregate/member_length.hpp>
 
-namespace stf::intro::detail::agg {
+namespace stf::intro::detail {
 
-namespace detail {
+template<aggregate T, usize Index = 0, usize Count = 0>
+struct arity_helper;
 
-template<typename T, usize Count = 0, usize AtIndex = 0>
-struct member_counter;
+template<aggregate T, usize Index, usize Count>
+    requires(Index > faux_arity<T>)
+struct arity_helper<T, Index, Count> {
+    static_assert(!std::is_same_v<T, T>, "something went wrong");
+};
 
-template<typename T, usize Count, usize AtIndex>
-    requires(AtIndex != faux_arity_v<T>)
-struct member_counter<T, Count, AtIndex> : member_counter<T, Count + 1, AtIndex + member_length_v<T, AtIndex>> {};
+template<aggregate T, usize Index, usize Count>
+    requires(Index == faux_arity<T>)
+struct arity_helper<T, Index, Count> : std::integral_constant<usize, Count> {};
 
-template<typename T, usize Count, usize AtIndex>
-    requires(AtIndex == faux_arity_v<T>)
-struct member_counter<T, Count, AtIndex> : std::integral_constant<usize, Count> {};
+template<aggregate T, usize Index, usize Count>
+    requires(Index < faux_arity<T>)
+struct arity_helper<T, Index, Count> : arity_helper<T, Index + member_length<T, Index>, Count + 1> {};
 
-}  // namespace detail
-
-}
+}  // namespace stf::intro::detail
 
 namespace stf::intro {
 
-/// Gets the arity of an aggregate.
 template<typename T>
-inline constexpr usize arity_v = detail::agg::detail::member_counter<std::remove_cvref_t<T>, 0, 0>::value;
+    requires(std::is_aggregate_v<std::remove_cvref_t<T>>)
+inline static constexpr usize arity = detail::arity_helper<std::remove_cvref_t<T>>::value;
 
 }
 
-namespace stf::intro::detail::agg::ct_tests {
+#if STF_INTRO_RUN_CT_TESTS
 
-static_assert(([] constexpr->bool {
-    struct Anon {
-        int& a;
-        int b[2];
-        int c;
-        int d;
-    };
+namespace stf::intro::detail::ct_tests {
 
-    static_assert(detail::member_counter<Anon, 0, 0>::value == 4);
-    static_assert(arity_v<Anon> == 4);
+static_assert(([]() {
+    static_assert(arity<test_struct_simple> == 5);
+    static_assert(arity<test_struct_inner> == 9);
+    static_assert(arity<test_struct> == 3);
 
     return true;
 })());
 
 }
+
+#endif

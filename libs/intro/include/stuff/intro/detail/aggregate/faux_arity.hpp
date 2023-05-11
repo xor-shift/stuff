@@ -1,82 +1,62 @@
 #pragma once
 
-#include <stuff/intro/detail/aggregate/bsearch.hpp>
-#include <stuff/intro/detail/aggregate/initializable_n.hpp>
+#include "./config.hpp"
 
-namespace stf::intro::detail::agg {
+#include <stuff/intro/detail/aggregate/initializable.hpp>
+#include <stuff/intro/detail/aggregate/search.hpp>
 
-namespace detail {
-
-template<typename T, usize LowerBound = 0>
-constexpr auto faux_arity_lower_bound() -> usize {
-    if constexpr (initializable_n<T, LowerBound>) {
-        return LowerBound;
-    } else {
-        return faux_arity_lower_bound<T, LowerBound + 1>();
-    }
-}
-
-template<typename T, usize LowerBound = faux_arity_lower_bound<T>()>
-constexpr auto faux_arity_upper_bound() -> usize {
-    constexpr size_t next_index = LowerBound == 0 ? 1 : LowerBound * 2;
-    if constexpr (!initializable_n<T, next_index>) {
-        return next_index;
-    } else {
-        return faux_arity_upper_bound<T, next_index>();
-    }
-}
-
-}
-
-namespace ct_tests {
-
-static_assert(([] constexpr->bool {
-    struct Anon {
-        int& a;
-        int b[2];
-        int c;
-        int d;
-    };
-
-    static_assert(detail::faux_arity_upper_bound<Anon>() == 8);
-    return true;
-})());
-
-}
-
-namespace detail {
+namespace stf::intro::detail {
 
 template<typename T>
-struct faux_arity_predicate {
-    template<usize N>
-    struct predicate : std::bool_constant<initializable_n<T, N>> {};
+struct initializable_predicate {
+    template<usize NumArgs>
+    struct predicate : std::bool_constant<initializable_n<T, NumArgs>> {};
 };
 
-
-}
-
-// clang-format off
-/// Returns the number of elements a <code>T</code> can be initialised with after brace-elision.\n
-/// For example, a type of <code>struct { int& a; int b; int c[3]; }</code> would result in a value of 5.\n
 template<typename T>
-inline constexpr usize faux_arity_v = binary_search<detail::faux_arity_predicate<T>::template predicate, detail::faux_arity_lower_bound<T>(), detail::faux_arity_upper_bound<T>()>::type::value;
-// clang-format on
+inline static constexpr usize faux_arity_lower_bound = forward_search<initializable_predicate<T>::template predicate>::value;
 
-namespace ct_tests {
+enum class upper_bound_strategy {
+    sizeof_bf,
+    sizeof_no_bf,
+    powers_of_two,
+};
 
-static_assert(([] constexpr->bool {
-    struct Anon {
-        int& a;
-        int b[2];
-        int c;
-        int d;
-    };
+template<typename T, upper_bound_strategy>
+struct faux_arity_upper_bound_helper;
 
-    static_assert(faux_arity_v<Anon> == 5);
+template<typename T>
+struct faux_arity_upper_bound_helper<T, upper_bound_strategy::sizeof_bf> : std::integral_constant<usize, sizeof(T) * 8> {};
+
+template<typename T>
+struct faux_arity_upper_bound_helper<T, upper_bound_strategy::sizeof_no_bf> : std::integral_constant<usize, sizeof(T)> {};
+
+template<typename T>
+struct faux_arity_upper_bound_helper<T, upper_bound_strategy::powers_of_two>
+    : powers_of_two_search<invert_predicate<initializable_predicate<T>::template predicate>::template predicate, faux_arity_lower_bound<T>> {};
+
+template<typename T, upper_bound_strategy Strategy = upper_bound_strategy::powers_of_two>
+inline static constexpr usize faux_arity_upper_bound = faux_arity_upper_bound_helper<T, Strategy>::value;
+
+template<typename T, upper_bound_strategy UBStrategy = upper_bound_strategy::powers_of_two>
+inline static constexpr usize faux_arity = binary_search<initializable_predicate<T>::template predicate, faux_arity_lower_bound<T>, faux_arity_upper_bound<T, UBStrategy>>::value;
+
+}  // namespace stf::intro::detail
+
+#if STF_INTRO_RUN_CT_TESTS
+
+namespace stf::intro::detail::ct_tests {
+
+static_assert(([]() {
+    static_assert(faux_arity_lower_bound<test_struct_inner> == 8);
+    static_assert(faux_arity_upper_bound<test_struct_inner, upper_bound_strategy::powers_of_two> == 16);
+    static_assert(faux_arity<test_struct_inner, upper_bound_strategy::powers_of_two> == 13);
+
+    static_assert(faux_arity<test_struct, upper_bound_strategy::powers_of_two> == 15);
 
     return true;
 })());
 
-}
+}  // namespace stf::intro::detail::ct_tests
 
-}
+#endif

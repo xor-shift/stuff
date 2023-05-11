@@ -17,6 +17,8 @@ target_include_directories(${PROJECT_NAME} INTERFACE include)
 
 target_link_libraries(${PROJECT_NAME} INTERFACE stuff_core)
 
+target_compile_options(${PROJECT_NAME} INTERFACE -ftemplate-backtrace-limit=128)
+
 ### TESTS
 
 add_executable(${PROJECT_NAME}_tests

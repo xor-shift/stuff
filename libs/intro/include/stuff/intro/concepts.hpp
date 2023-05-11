@@ -171,6 +171,15 @@ concept tuple_introspector =     //
   static_introspector<Intro> &&  //
   requires { typename detail::get_helper<Intro, Intro::size() - 1>::type; };
 
+template<typename Intro>
+concept variant_introspector =     //
+  tuple_introspector<Intro> &&  //
+  requires(const typename Intro::intro_type& clval) {
+      { Intro::template holds_variant<0uz>(clval) } -> std::convertible_to<bool>;
+      { Intro::held_variant(clval) } -> std::convertible_to<usize>;
+      Intro::visit(clval, []<typename T>(T&& v) -> void {});
+  };
+
 /**
  * An introspector that has the following defined on top of
  * <code>tuple_inspector</code>'s definitions:

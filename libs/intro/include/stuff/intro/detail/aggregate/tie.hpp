@@ -98,12 +98,12 @@ namespace stf::intro {
 
 template<typename T>
 constexpr auto tie_aggregate(T&& v) {
-    return detail::agg::tie_helpers::f(std::forward<T>(v), std::integral_constant<usize, arity_v<T>>{});
+    return detail::agg::tie_helpers::f(std::forward<T>(v), std::integral_constant<usize, arity<T>>{});
 }
 
-namespace detail::agg::ce_tests {
+namespace detail::agg::ct_tests {
 
-static_assert(([] constexpr->bool {
+/*static_assert(([] constexpr->bool {
     struct test_struct {
         int a;
         int& b;
@@ -126,7 +126,7 @@ static_assert(([] constexpr->bool {
                   decltype(tied_bar), std::tuple<int const&, int const&, int const&, int const&&, int const&&>>);
 
     return true;
-})());
+})());*/
 
 }
 

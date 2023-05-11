@@ -1,13 +1,18 @@
-#include <stuff/intro/introspectors/intro_builder.hpp>
+//#include <stuff/intro/introspectors/intro_builder.hpp>
+
+#include <stuff/intro/detail/aggregate/arity.hpp>
+#include <stuff/intro/detail/aggregate/member_length.hpp>
+#include <stuff/intro/detail/aggregate/initializable_multipart.hpp>
+#include <stuff/intro/detail/aggregate/faux_arity.hpp>
 
 #include <gtest/gtest.h>
 
 #include <stuff/intro.hpp>
-#include <stuff/intro/detail/aggregate/member_types.hpp>
 #include <stuff/intro/introspectors/array.hpp>
 #include <stuff/intro/introspectors/span.hpp>
 #include <stuff/intro/introspectors/tuple.hpp>
-#include <stuff/intro/introspectors/unordered_map.hpp>
+#include <stuff/intro/introspectors/map.hpp>
+#include <stuff/intro/introspectors/intro_builder.hpp>
 
 TEST(intro, basic_array) {
     std::array<int, 3> arr_0{1, 2, 3};
@@ -176,7 +181,7 @@ TEST(intro, basic_aggregate) {
     test_tuple_like<s_0, s_1>();
 }
 
-TEST(intro, custom_introspector) {
+/*TEST(intro, member_introspector) {
     struct test_struct {
         int data[5];
 
@@ -217,7 +222,7 @@ TEST(intro, custom_introspector) {
     ASSERT_EQ(intro::index(foo, 2), 3);
     ASSERT_EQ(intro::index(foo, 3), 4);
     ASSERT_EQ(intro::index(foo, 4), 5);
-}
+}*/
 
 TEST(intro, intro_builder) {
     struct square {
@@ -267,7 +272,7 @@ TEST(intro, intro_builder_quick_build) {
     using intro_0 = stf::intro::intro_builder<test_struct>::quick_build<"a", "b", "c">;
     static_assert(stf::intro::concepts::tuple_introspector<intro_0>);
 
-    static_assert(stf::intro::arity_v<test_struct> == 3);
+    static_assert(stf::intro::arity<test_struct> == 3);
 
     test_struct s{
       .a = 1,

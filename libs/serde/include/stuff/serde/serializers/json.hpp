@@ -49,6 +49,20 @@ struct json_serializer_base {
         return emit_char('"') && emit_str(v) && emit_char('"') ? return_type{} : stf::unexpected{"buffer overrun"};
     }
 
+    template<typename T>
+        requires requires(T&& v) {
+                     typename T::value_type;
+                     (bool)v;
+                     { *v } -> std::convertible_to<typename T::value_type const&>;
+                 }
+    constexpr auto serialize_optional(T&& opt_v) -> return_type {
+        if ((bool)opt_v) {
+            return serialize(*this, *opt_v);
+        } else {
+            return emit_str("null") ? return_type{} : stf::unexpected{"buffer overrun"};
+        }
+    }
+
     constexpr auto serialize_seq(std::optional<usize>) -> stf::expected<serialize_seq_type, error_type>;
 
     template<usize N>
@@ -56,7 +70,11 @@ struct json_serializer_base {
         return serialize_seq(N);
     }
 
+    template<typename K, typename V>
     constexpr auto serialize_map(std::optional<usize>) -> stf::expected<serialize_map_type, error_type>;
+
+    template<typename K>
+    constexpr auto serialize_struct(std::optional<usize>) -> stf::expected<serialize_struct_type, error_type>;
 
 private:
     Allocator m_allocator;
@@ -201,7 +219,16 @@ constexpr auto json_serializer_base<Extender, OIt, OItEnd, Allocator>::serialize
 }
 
 template<typename Extender, typename OIt, std::sentinel_for<OIt> OItEnd, typename Allocator>
+template<typename K, typename V>
 constexpr auto json_serializer_base<Extender, OIt, OItEnd, Allocator>::serialize_map(std::optional<usize>) -> stf::expected<serialize_map_type, error_type> {
+    using U = stf::expected<serialize_map_type, error_type>;
+
+    return this->emit_char('{') ? U{serialize_map_type(m_it, m_end, m_allocator)} : stf::unexpected{"buffer overrun"};
+}
+
+template<typename Extender, typename OIt, std::sentinel_for<OIt> OItEnd, typename Allocator>
+template<typename K>
+constexpr auto json_serializer_base<Extender, OIt, OItEnd, Allocator>::serialize_struct(std::optional<usize>) -> stf::expected<serialize_struct_type, error_type> {
     using U = stf::expected<serialize_map_type, error_type>;
 
     return this->emit_char('{') ? U{serialize_map_type(m_it, m_end, m_allocator)} : stf::unexpected{"buffer overrun"};

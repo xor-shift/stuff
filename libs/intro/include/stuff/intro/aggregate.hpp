@@ -12,7 +12,7 @@ template<typename T>
 struct aggregate_introspector {
     using intro_type = std::remove_cvref_t<T>;
 
-    static constexpr auto size() -> usize { return arity_v<T>; }
+    static constexpr auto size() -> usize { return arity<T>; }
     static constexpr auto size(intro_type const& v) -> usize { return size(); }
 
     template<usize I>
