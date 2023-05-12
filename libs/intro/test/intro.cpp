@@ -1,18 +1,12 @@
-//#include <stuff/intro/introspectors/intro_builder.hpp>
-
-#include <stuff/intro/detail/aggregate/arity.hpp>
-#include <stuff/intro/detail/aggregate/member_length.hpp>
-#include <stuff/intro/detail/aggregate/initializable_multipart.hpp>
-#include <stuff/intro/detail/aggregate/faux_arity.hpp>
-
 #include <gtest/gtest.h>
 
-#include <stuff/intro.hpp>
 #include <stuff/intro/introspectors/array.hpp>
 #include <stuff/intro/introspectors/span.hpp>
 #include <stuff/intro/introspectors/tuple.hpp>
 #include <stuff/intro/introspectors/map.hpp>
 #include <stuff/intro/introspectors/intro_builder.hpp>
+
+#include <stuff/intro.hpp>
 
 TEST(intro, basic_array) {
     std::array<int, 3> arr_0{1, 2, 3};

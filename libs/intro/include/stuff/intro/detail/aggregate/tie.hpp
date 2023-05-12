@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./config.hpp"
+
 #include <stuff/intro/detail/aggregate/arity.hpp>
 
 #include <tuple>
@@ -27,6 +29,8 @@ struct make_reference_like<Like, Thing> {
 template<typename Like, typename Thing>
     requires(!std::is_reference_v<Like>)
 struct make_reference_like<Like, Thing> : make_reference_like<Like&&, Thing> {};
+
+#if STF_INTRO_RUN_CT_TESTS
 
 namespace ct_tests {
 
@@ -78,6 +82,8 @@ static_assert(([] constexpr->bool {
 
 }
 
+#endif
+
 }  // namespace stf::intro::detail
 
 #pragma push_macro("FWD")
@@ -95,6 +101,8 @@ template<typename T>
 constexpr auto tie_aggregate(T&& v) {
     return detail::tie_helpers::f(std::forward<T>(v), std::integral_constant<usize, arity<T>>{});
 }
+
+#if STF_INTRO_RUN_CT_TESTS
 
 namespace detail::ct_tests {
 
@@ -123,5 +131,7 @@ static_assert(([] constexpr->bool {
 })());
 
 }
+
+#endif
 
 }  // namespace stf::intro

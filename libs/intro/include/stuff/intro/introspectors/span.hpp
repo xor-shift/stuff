@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef STF_INTRO_HAS_BEEN_INCLUDED
+# error you should include introspector related headers before <stuff/intro.hpp>
+#endif
+
 #include <stuff/core.hpp>
 #include <stuff/intro/concepts.hpp>
 

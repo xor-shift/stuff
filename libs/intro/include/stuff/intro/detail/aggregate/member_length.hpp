@@ -36,9 +36,9 @@ struct member_length_predicate {
 template<aggregate T, usize Index>
 struct member_length_helper;
 
-/*template<aggregate T, usize Index>
+template<aggregate T, usize Index>
     requires member_is_initializer_list<T, Index>
-struct member_length_helper<T, Index> : std::integral_constant<usize, 1> {};*/
+struct member_length_helper<T, Index> : std::integral_constant<usize, 1> {};
 
 template<aggregate T, usize Index>
     requires(!member_is_initializer_list<T, Index>)

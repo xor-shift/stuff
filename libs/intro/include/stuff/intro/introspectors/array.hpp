@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef STF_INTRO_HAS_BEEN_INCLUDED
+# error you should include introspector related headers before <stuff/intro.hpp>
+#endif
+
 #include <stuff/core.hpp>
 #include <stuff/intro/concepts.hpp>
 
@@ -26,9 +30,9 @@ struct array_introspector {
     static constexpr auto begin(T (&&v)[N]) -> T* { return v; }
 
     static constexpr auto end(const T (&v)[N]) -> const T* { return v + N; }
-    static constexpr auto end(const T (&&v)[N]) -> const T* { return v + N; }
+    //static constexpr auto end(const T (&&v)[N]) -> const T* { return v + N; }
     static constexpr auto end(T (&v)[N]) -> T* { return v + N; }
-    static constexpr auto end(T (&&v)[N]) -> T* { return v + N; }
+    //static constexpr auto end(T (&&v)[N]) -> T* { return v + N; }
 
     static constexpr auto begin(std::array<T, N> const& v) -> const T* { return v.begin(); }
     static constexpr auto begin(std::array<T, N> const&& v) -> const T* { return v.begin(); }
@@ -96,15 +100,15 @@ static_assert(concepts::span_introspector<array_introspector<int, 3>>);
 }  // namespace stf::intro
 
 template<typename T, usize N>
-constexpr auto _stf_adl_introspector(const T (&)[N]) {
-    return ::stf::intro::array_introspector<T, N>{};
+constexpr auto _stf_adl_introspector(T (&)[N]) {
+    return ::stf::intro::array_introspector<std::remove_cvref_t<T>, N>{};
 }
 
 namespace std {
 
 template<typename T, usize N>
 constexpr auto _stf_adl_introspector(std::array<T, N> const&) {
-    return ::stf::intro::array_introspector<T, N>{};
+    return ::stf::intro::array_introspector<std::remove_cvref_t<T>, N>{};
 }
 
 }  // namespace std

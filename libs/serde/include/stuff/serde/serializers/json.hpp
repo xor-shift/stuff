@@ -44,6 +44,18 @@ struct json_serializer_base {
 
     constexpr auto serialize_bool(bool v) -> return_type { return emit_str(v ? "true" : "false") ? return_type{} : stf::unexpected{"buffer overrun"}; }
 
+    template<typename T>
+    constexpr auto serialize_some(T&& v) -> return_type {
+        return serialize(*this, std::forward<T>(v));
+    }
+
+    template<typename T>
+    constexpr auto serialize_none() -> return_type {
+        std::string_view to_emit = std::is_arithmetic_v<std::remove_cvref_t<T>> ? "undefined" : "null";
+
+        return emit_str(to_emit) ? return_type{} : stf::unexpected{"buffer overrun"};
+    }
+
     template<typename Char, typename Traits = std::char_traits<Char>>
     constexpr auto serialize_str(std::basic_string_view<Char, Traits> v) -> return_type {
         return emit_char('"') && emit_str(v) && emit_char('"') ? return_type{} : stf::unexpected{"buffer overrun"};

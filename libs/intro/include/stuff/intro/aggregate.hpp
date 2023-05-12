@@ -34,7 +34,7 @@ struct aggregate_introspector {
     }
 };
 
-namespace agg::ce_tests {
+namespace ce_tests {
 
 static_assert(([] constexpr->bool {
     struct test_struct {
