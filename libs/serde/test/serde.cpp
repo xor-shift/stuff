@@ -126,11 +126,11 @@ struct full_test_t {
     std::variant<int, float> b;
     std::tuple<int, double> c;
     std::map<std::string_view, int> d;
-    // std::set<std::string_view> e;
+    std::set<std::string_view> e;
 };
 
 constexpr auto _stf_adl_introspector(full_test_t const&) {
-    return stf::intro::intro_builder<full_test_t>::quick_build<"a", "b", "c", "d">{};  //
+    return stf::intro::intro_builder<full_test_t>::quick_build<"a", "b", "c", "d", "e">{};  //
 }
 
 TEST(serde, full_json) {
@@ -154,7 +154,7 @@ TEST(serde, full_json) {
       .b = 3.1415926f,
       .c = {12, 3.1415926},
       .d{{"thirteen", 13}, {"fourteen", 14}},
-      //.e {"15", "16"},
+      .e {"15", "16"},
     };
 
     std::string str{};
@@ -185,7 +185,8 @@ TEST(serde, full_json) {
         "\"d\":{"
           "\"fourteen\":14,"
           "\"thirteen\":13"
-        "}"
+        "},"
+        "\"e\":[\"15\",\"16\"]"
       "}"
       // clang-format on
     };

@@ -215,6 +215,29 @@ concept named_tuple_introspector =  //
   tuple_introspector<Intro> &&      //
   requires { typename detail::name_helper<Intro, Intro::size() - 1>::type; };
 
+template<typename Intro>
+concept sequence_introspector =                    //
+  basic_introspector<Intro> &&                 //
+  requires(                                    //
+    typename Intro::intro_type& lval,          //
+    typename Intro::intro_type&& rval,         //
+    const typename Intro::intro_type& clval,   //
+    const typename Intro::intro_type&& crval,  //
+    usize i
+  ) {
+      typename Intro::value_type;
+
+      Intro::begin(lval);
+      Intro::begin(clval);
+      Intro::begin(rval);
+      Intro::begin(crval);
+
+      Intro::end(lval);
+      Intro::end(clval);
+      Intro::end(rval);
+      Intro::end(crval);
+  };
+
 /**
  * An introspector that has the following defined:
  *
@@ -237,7 +260,7 @@ concept named_tuple_introspector =  //
  */
 template<typename Intro>
 concept span_introspector =                    //
-  basic_introspector<Intro> &&                 //
+  sequence_introspector<Intro> &&                 //
   requires(                                    //
     typename Intro::intro_type& lval,          //
     typename Intro::intro_type&& rval,         //
@@ -245,18 +268,6 @@ concept span_introspector =                    //
     const typename Intro::intro_type&& crval,  //
     usize i
   ) {
-      typename Intro::value_type;
-
-      Intro::begin(lval);
-      Intro::begin(clval);
-      Intro::begin(rval);
-      Intro::begin(crval);
-
-      Intro::end(lval);
-      Intro::end(clval);
-      Intro::end(rval);
-      Intro::end(crval);
-
       // clang-format off
       { Intro::index(std::declval<typename Intro::intro_type>(), i) } -> std::same_as<typename Intro::value_type &&>;
       { Intro::index(std::declval<typename Intro::intro_type&>(), i) } -> std::same_as<typename Intro::value_type &>;

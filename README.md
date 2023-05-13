@@ -16,6 +16,7 @@ Stuff© Libraries™ is a poorly made set of utilities inspired by boost.
 - `qoi`: A QOI en/decoder, not very fast (includes a lossy encoder)
 - `random`: Random number generation utilities (all constexpr, to hell with erand48)
 - `ranvec`: A combination of `random` and `blas`; random vector generation utilities
+- `serde`: SERialization (WIP) and DEserialization (NYI), inspired heavily by Rust's Serde, closely related to `stf::intro`
 - `scope`: Scope utilities from
   [ibrary fundamentals TS v3](https://cplusplus.github.io/fundamentals-ts/v3.html#scopeguard.exit)
 - `sfloat`: Soft-float library, very WIP, no arithmetic

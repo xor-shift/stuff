@@ -50,7 +50,7 @@ concept adl_serializable = requires(Serializer&& ser, T&& v) { _stf_adl_serializ
 template<typename Serializer, typename T, typename Intro>
 struct intro_serializer;
 
-template<typename Serializer, typename T, intro::concepts::span_introspector Intro>
+template<typename Serializer, typename T, intro::concepts::sequence_introspector Intro>
 struct intro_serializer<Serializer, T, Intro> {
     constexpr auto operator()(Serializer&& serializer, T&& v)
       -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type> {

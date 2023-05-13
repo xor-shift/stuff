@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef STF_INTRO_HAS_BEEN_INCLUDED
-# error you should include introspector related headers before <stuff/intro.hpp>
+#    error you should include introspector related headers before <stuff/intro.hpp>
 #endif
 
 #include <stuff/core.hpp>
@@ -15,8 +15,9 @@ namespace stf::intro {
 namespace detail {
 
 template<typename T, typename K, typename V>
-concept mapping_to =  //
-  (std::is_same_v<const typename std::remove_cvref_t<T>::key_type, const K>) && (std::is_same_v<typename std::remove_cvref_t<T>::mapped_type, V>);
+concept mapping_to =                                                             //
+  (std::is_same_v<const typename std::remove_cvref_t<T>::key_type, const K>) &&  //
+  (std::is_same_v<typename std::remove_cvref_t<T>::mapped_type, V>);
 
 }
 
@@ -29,7 +30,9 @@ struct map_introspector {
                                                                    // other parameters are unnecessary
 
     template<detail::mapping_to<K, V> Map>
-    static constexpr auto size(Map&& v) -> usize { return v.size(); }
+    static constexpr auto size(Map&& v) -> usize {
+        return v.size();
+    }
 
     template<detail::mapping_to<K, V> Map>
     static constexpr auto index(Map&& v, std::string_view i) -> auto& {
