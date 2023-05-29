@@ -19,6 +19,7 @@ template<usize Size>
 struct string_literal {
     char data[Size];
 
+    constexpr string_literal() = default;
     constexpr string_literal(const char (&v)[Size]) noexcept { std::copy(std::begin(v), std::end(v), data); }
 
     constexpr static auto size() -> usize { return Size - 1; }
@@ -43,6 +44,16 @@ struct string_literal {
         }
 
         return true;
+    }
+
+    template<usize Start, usize Len>
+        requires (Start < size())
+    constexpr auto substr() const -> string_literal<Len + 1> {
+        string_literal<Len + 1> ret {};
+        std::copy_n(data, Len, ret.data);
+        ret.data[Len] = '\0';
+
+        return ret;
     }
 };
 
@@ -174,3 +185,7 @@ inline void unreachable_with_message() {
 }
 
 };  // namespace stf
+
+using namespace std::literals;
+using namespace std::string_view_literals;
+using namespace std::string_literals;

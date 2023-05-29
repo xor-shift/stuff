@@ -32,6 +32,9 @@ constexpr auto get_bit(T v, T idx) -> bool {
     return ((v >> idx) & 1) != 0;
 }
 
+template<typename T, usize StartBitMSB, stf::string_literal Pattern>
+constexpr auto extract(T v) -> T;
+
 }  // namespace stf::bit
 
 #include <stuff/bit/detail/bit.ipp>
