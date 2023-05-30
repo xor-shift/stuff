@@ -47,9 +47,9 @@ struct string_literal {
     }
 
     template<usize Start, usize Len>
-        requires (Start < size())
+        requires(Start < size())
     constexpr auto substr() const -> string_literal<Len + 1> {
-        string_literal<Len + 1> ret {};
+        string_literal<Len + 1> ret{};
         std::copy_n(data, Len, ret.data);
         ret.data[Len] = '\0';
 
@@ -66,11 +66,9 @@ namespace detail {
 template<usize I, typename... Ts>
 struct nth_type_helper;
 
-template<usize I, typename... Ts>
-    requires(I < sizeof...(Ts))
-struct nth_type_helper<I, Ts...> {
-    using type = typename bunch_of_types<Ts...>::template nth_type<I - 1>;
-};
+template<usize I, typename T, typename... Ts>
+    requires(I < sizeof...(Ts) + 1 && I != 0)
+struct nth_type_helper<I, T, Ts...> : nth_type_helper<I - 1, Ts...> {};
 
 template<typename T, typename... Ts>
 struct nth_type_helper<0, T, Ts...> {
@@ -89,10 +87,9 @@ struct find_type_helper<sizeof...(Ts), Predicate, false, Ts...> : std::integral_
 };
 
 template<usize I, template<typename> typename Predicate, typename... Ts>
-struct find_type_helper<I, Predicate, false, Ts...>
-    : find_type_helper<I + 1, Predicate, Predicate<typename bunch_of_types<Ts...>::template nth_type<I + 1>>::value> {};
+struct find_type_helper<I, Predicate, false, Ts...> : find_type_helper<I + 1, Predicate, Predicate<typename bunch_of_types<Ts...>::template nth_type<I + 1>>::value> {};
 
-}
+}  // namespace detail
 
 template<typename... Ts>
     requires(sizeof...(Ts) == 0)
@@ -121,8 +118,7 @@ struct bunch_of_types<T> {
     using nth_type = T;
 
     template<template<typename> typename Predicate>
-    using find_type =
-      std::conditional_t<Predicate<T>::value, std::integral_constant<usize, 0>, std::integral_constant<usize, 1>>;
+    using find_type = std::conditional_t<Predicate<T>::value, std::integral_constant<usize, 0>, std::integral_constant<usize, 1>>;
 };
 
 template<typename... Funcs>
@@ -184,7 +180,6 @@ template<string_literal Lit>
 constexpr void unreachable_with_message() {
     std::unreachable();
 }
-
 };  // namespace stf
 
 using namespace std::literals;
