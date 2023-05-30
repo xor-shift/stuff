@@ -99,7 +99,7 @@ struct image {
 
     constexpr void destroy() noexcept {
         if (!empty()) {
-            m_allocator.deallocate(m_data, m_width * m_height);
+            m_allocator.deallocate(m_data, m_width * m_height * 4);
             m_data = nullptr;
             m_width = 0;
             m_height = 0;

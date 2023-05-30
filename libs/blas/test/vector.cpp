@@ -20,7 +20,7 @@ void test_vector_type() {
     ASSERT_EQ(v_1 <=> v_0, std::partial_ordering::greater);
     ASSERT_EQ((v_0 + v_1 <=> vector<int, 3>{3, 5, 7}), std::partial_ordering::equivalent);
     ASSERT_EQ((v_0 - v_1 <=> vector<int, 3>{-3, -3, -3}), std::partial_ordering::equivalent);
-    ASSERT_EQ((v_0 - v_1 <=> vector<int, 3>{-3, -3, -2}), std::partial_ordering::unordered);
+    ASSERT_EQ((v_0 - v_1 <=> vector<int, 3>{-3, -3, -2}), std::partial_ordering::less);
 
     ASSERT_EQ(-v_0, (vector<int, 3>{0, -1, -2}));
     ASSERT_EQ(-v_1, (vector<int, 3>{-3, -4, -5}));

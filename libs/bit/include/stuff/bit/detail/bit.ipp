@@ -5,6 +5,7 @@
 #include <array>
 #include <bit>
 #include <concepts>
+#include <string_view>
 
 namespace stf::bit {
 
@@ -132,7 +133,7 @@ constexpr auto left_shift(T v, int amt) -> T {
 
 template<typename T, int StartBitMSB, stf::string_literal Pattern>
 consteval auto generate_extraction_info() {
-    auto str = std::string_view{Pattern.c_str()};
+    auto str = std::string_view{Pattern.c_str(), Pattern.size()};
 
     auto extract_int = [](auto&& str) -> int {
 #ifdef __cpp_lib_constexpr_charconv
@@ -175,7 +176,9 @@ consteval auto generate_extraction_info() {
 
     int bit_index = StartBitMSB;
     for (usize i = 0; !str.empty(); i++) {
-        auto segment = str.substr(0, std::min<std::string_view::size_type>(str.find_first_of('|'), str.size()));
+        //const auto segment_sz = std::min<std::string_view::size_type>(str.find_first_of('|'), str.size());
+        const auto segment_sz = std::distance(str.begin(), std::find(str.begin(), str.end(), '|'));
+        auto segment = str.substr(0, segment_sz);
         str = segment.size() == str.size() ? str.substr(segment.size()) : str.substr(segment.size() + 1);
 
         const auto from = extract_int(segment);

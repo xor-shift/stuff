@@ -25,7 +25,7 @@ constexpr auto sample_n_ball_rejection(Gen& gen) -> blas::vector<T, N> {
         for (usize i = 0; i < N; i++) {
             ret[i] = 2 * dist(gen) - 1;
         }
-    } while (abs(ret) > 1);
+    } while (length(ret) > 1);
 
     return ret;
 }

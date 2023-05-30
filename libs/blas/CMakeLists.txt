@@ -11,11 +11,15 @@ if (NOT TARGET stuff_core)
     add_subdirectory(../core ${CMAKE_CURRENT_BINARY_DIR}/libs/core)
 endif()
 
+if (NOT TARGET stuff_sfloat)
+    add_subdirectory(../sfloat ${CMAKE_CURRENT_BINARY_DIR}/libs/sfloat)
+endif()
+
 add_library(${PROJECT_NAME} INTERFACE)
 
 target_include_directories(${PROJECT_NAME} INTERFACE include)
 
-target_link_libraries(${PROJECT_NAME} INTERFACE stuff_core)
+target_link_libraries(${PROJECT_NAME} INTERFACE stuff_core stuff_sfloat)
 
 ### TESTS
 

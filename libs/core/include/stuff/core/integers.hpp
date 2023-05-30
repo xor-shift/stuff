@@ -50,30 +50,35 @@ struct nint_helper;
 
 template<>
 struct nint_helper<8> {
-    using type = u8;
+    using type = i8;
 };
 
 template<>
 struct nint_helper<16> {
-    using type = u16;
+    using type = i16;
 };
 
 template<>
 struct nint_helper<32> {
-    using type = u32;
+    using type = i32;
 };
 
 template<>
 struct nint_helper<64> {
-    using type = u64;
+    using type = i64;
+};
+
+template<>
+struct nint_helper<128> {
+    using type = i128;
 };
 
 }  // namespace detail
 
 template<size_t Bits>
-using nint = std::make_signed_t<typename detail::nint_helper<Bits>::type>;
+using nint = typename detail::nint_helper<Bits>::type;
 
 template<size_t Bits>
-using nuint = std::make_unsigned_t<typename detail::nint_helper<Bits>::type>;
+using nuint = std::make_unsigned_t<nint<Bits>>;
 
 }  // namespace stf::integers

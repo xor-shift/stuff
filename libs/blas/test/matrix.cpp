@@ -2,8 +2,6 @@
 
 #include <gtest/gtest.h>
 
-using namespace stf::integers;
-
 template<template<typename T, usize Rows, usize Cols> class matrix>
     requires(stf::blas::concepts::matrix_backend<matrix<int, 2, 4>>)
 void basic_test_matrix_type() {
@@ -48,22 +46,22 @@ struct vector_matrix_tester {
 
         matrix<int, 3, 3> identity{1, 0, 0, 0, 1, 0, 0, 0, 1};
         matrix<int, 3, 3> reverse{0, 0, 1, 0, 1, 0, 1, 0, 0};
-        matrix<float, 3, 3> rot = stf::blas::rotation_matrix<float, matrix>(deg_90, deg_90, deg_90);
+        matrix<float, 3, 3> rot = matrix<float, 3, 3>::rotate(deg_90, deg_90, deg_90);
 
         vector<int, 3> ivec{1, 2, 3};
         vector<float, 3> fvec{1, 2, 3};
         vector<float, 3> fvec_small{0.001f, 0.001f, 0.001f};
 
-        stf::blas::concepts::nd_vector_of_t<int, 3> auto res_identity = identity * ivec;
-        stf::blas::concepts::nd_vector_of_t<int, 3> auto res_reverse = reverse * ivec;
+        stf::blas::concepts::generic_vector<int, 3> auto res_identity = identity * ivec;
+        stf::blas::concepts::generic_vector<int, 3> auto res_reverse = reverse * ivec;
 
         // [1, 2, 3]: start
         // [1, -3, 2]: 90 degree rot along x
         // [2, -3, -1]: 90 degree rot along y
         // [3, 2, -1]: 90 degree rot along z
 
-        stf::blas::concepts::nd_vector_of_t<float, 3> auto res_rot = rot * fvec;
-        stf::blas::concepts::nd_vector_of_t<float, 3> auto res_rot_error = abs(res_rot - vector<float, 3>{3, 2, -1});
+        stf::blas::concepts::generic_vector<float, 3> auto res_rot = rot * fvec;
+        stf::blas::concepts::generic_vector<float, 3> auto res_rot_error = abs(res_rot - vector<float, 3>{3, 2, -1});
 
         ASSERT_EQ(res_identity, ivec);
         ASSERT_EQ(res_reverse, (vector<int, 3>{3, 2, 1}));

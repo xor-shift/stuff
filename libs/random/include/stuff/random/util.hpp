@@ -3,6 +3,7 @@
 #include <stuff/core.hpp>
 #include <stuff/random/concepts.hpp>
 
+#include <bit>
 #include <functional>
 #include <span>
 

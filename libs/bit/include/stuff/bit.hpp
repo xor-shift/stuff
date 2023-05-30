@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <stuff/core/integers.hpp>
+#include <stuff/core.hpp>
 
 #include <bit>
 #include <concepts>

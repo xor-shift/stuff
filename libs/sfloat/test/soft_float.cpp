@@ -4,8 +4,6 @@
 
 #include <span>
 
-using namespace stf::integers;
-
 namespace {
 
 template<std::unsigned_integral T>
@@ -42,8 +40,6 @@ static std::span<const test_entry<u32>> get_sp_test_entries() {
     auto zeroc = classification::zero;
     auto snormc = classification::subnormal;
     auto normc = classification::normal;
-
-    using stf::u32;
 
     // common values
     test_entry<u32>::result_pair zero{0x00000000, zeroc};         //  0

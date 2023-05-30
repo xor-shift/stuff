@@ -60,6 +60,40 @@ struct string_literal {
 template<typename... Ts>
 struct bunch_of_types;
 
+// bless you, GCC
+namespace detail {
+
+template<usize I, typename... Ts>
+struct nth_type_helper;
+
+template<usize I, typename... Ts>
+    requires(I < sizeof...(Ts))
+struct nth_type_helper<I, Ts...> {
+    using type = typename bunch_of_types<Ts...>::template nth_type<I - 1>;
+};
+
+template<typename T, typename... Ts>
+struct nth_type_helper<0, T, Ts...> {
+    using type = T;
+};
+
+template<usize I, template<typename> typename Predicate, bool = Predicate<typename nth_type_helper<I>::type>::value, typename... Ts>
+struct find_type_helper;
+
+template<usize I, template<typename> typename Predicate, typename... Ts>
+struct find_type_helper<I, Predicate, true, Ts...> : std::integral_constant<usize, I> {};
+
+template<template<typename> typename Predicate, typename... Ts>
+struct find_type_helper<sizeof...(Ts), Predicate, false, Ts...> : std::integral_constant<usize, sizeof...(Ts)> {
+    // static_assert(!std::is_same_v<Predicate<T>, Predicate<T>>, "predicate not satisfied for any of the types");
+};
+
+template<usize I, template<typename> typename Predicate, typename... Ts>
+struct find_type_helper<I, Predicate, false, Ts...>
+    : find_type_helper<I + 1, Predicate, Predicate<typename bunch_of_types<Ts...>::template nth_type<I + 1>>::value> {};
+
+}
+
 template<typename... Ts>
     requires(sizeof...(Ts) == 0)
 struct bunch_of_types<Ts...> {
@@ -70,45 +104,12 @@ template<typename T, typename... Ts>
 struct bunch_of_types<T, Ts...> {
     inline static constexpr usize size = 1uz + sizeof...(Ts);
 
-private:
-    template<usize I>
-    struct nth_type_helper;
-
     template<usize I>
         requires(I < size)
-    struct nth_type_helper<I> {
-        using type = typename bunch_of_types<Ts...>::template nth_type<I - 1>;
-    };
-
-    template<>
-    struct nth_type_helper<0> {
-        using type = T;
-    };
-
-public:
-    template<usize I>
-        requires(I < size)
-    using nth_type = typename nth_type_helper<I>::type;
-
-private:
-    template<usize I, template<typename> typename Predicate, bool = Predicate<typename nth_type_helper<I>::type>::value>
-    struct find_type_helper;
-
-    template<usize I, template<typename> typename Predicate>
-    struct find_type_helper<I, Predicate, true> : std::integral_constant<usize, I> {};
+    using nth_type = typename detail::nth_type_helper<I, T, Ts...>::type;
 
     template<template<typename> typename Predicate>
-    struct find_type_helper<size - 1, Predicate, false> : std::integral_constant<usize, size> {
-        // static_assert(!std::is_same_v<Predicate<T>, Predicate<T>>, "predicate not satisfied for any of the types");
-    };
-
-    template<usize I, template<typename> typename Predicate>
-    struct find_type_helper<I, Predicate, false>
-        : find_type_helper<I + 1, Predicate, Predicate<nth_type<I + 1>>::value> {};
-
-public:
-    template<template<typename> typename Predicate>
-    using find_type = typename find_type_helper<0, Predicate>::type;
+    using find_type = typename detail::find_type_helper<0, Predicate, Predicate<T>::value, T, Ts...>::type;
 };
 
 template<typename T>
@@ -173,14 +174,14 @@ constexpr bool is_type_complete_v = false;
 template<typename T>
 constexpr bool is_type_complete_v<T, std::void_t<decltype(sizeof(T))>> = true;
 
-inline void assume(bool pred) {
+constexpr void assume(bool pred) {
     if (!pred) {
         std::unreachable();
     }
 }
 
 template<string_literal Lit>
-inline void unreachable_with_message() {
+constexpr void unreachable_with_message() {
     std::unreachable();
 }
 
