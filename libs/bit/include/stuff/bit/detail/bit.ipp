@@ -119,16 +119,10 @@ constexpr auto reverse_bytes(T v) -> T {
 namespace detail {
 
 template<typename T>
-constexpr auto left_shift(T v, int amt) -> T {
-    if (amt == 0) {
-        return v;
-    }
-
-    if (amt < 0) {
-        return v >> (T)(-amt);
-    }
-
-    return v << (T)amt;
+constexpr auto compound_shift(T v, int left_shift, int right_shift) -> T {
+    v <<= left_shift;
+    v >>= right_shift;
+    return v;
 };
 
 template<typename T, int StartBitMSB, stf::string_literal Pattern>
@@ -172,7 +166,7 @@ consteval auto generate_extraction_info() {
 
     constexpr auto amt_segments = std::count(Pattern.begin(), Pattern.end(), '|') + 1;
     constexpr auto amt_skips = std::count(Pattern.begin(), Pattern.end(), '~');
-    auto ret = std::array<std::pair<int, T>, amt_segments - amt_skips> {};
+    auto ret = std::array<std::tuple<T, int, int>, amt_segments - amt_skips> {};
 
     int bit_index = StartBitMSB;
     for (usize i = 0; !str.empty(); i++) {
@@ -190,13 +184,16 @@ consteval auto generate_extraction_info() {
         }
 
         const auto segment_width = from - down_to + 1;
-        const auto left_shift_amt = from - bit_index;
+        const auto raw_left_shift_amt = from - bit_index;
+        const auto left_shift_amt = raw_left_shift_amt < 0 ? 0 : raw_left_shift_amt;
+        const auto right_shift_amt = raw_left_shift_amt < 0 ? -raw_left_shift_amt : 0;
 
-        const T mask = left_shift(((T)1 << (T)segment_width) - (T)1, down_to);
+        const T mask = (((T)1 << (T)segment_width) - (T)1) << (T)down_to;
 
         if (!skip) {
-            ret[i].first = left_shift_amt;
-            ret[i].second = mask;
+            std::get<0>(ret[i]) = mask;
+            std::get<1>(ret[i]) = left_shift_amt;
+            std::get<2>(ret[i]) = right_shift_amt;
         } else {
             i -= 1;
         }
@@ -207,17 +204,21 @@ consteval auto generate_extraction_info() {
     return ret;
 }
 
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0].first == -7);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1].first == -1);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2].first == -4);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3].first == -2);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0].second == 0b0000'0011'0000);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1].second == 0b0011'1100'0000);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2].second == 0b0000'0000'0100);
-static_assert(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3].second == 0b0000'0000'1000);
+static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 0b0000'0011'0000);
+static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 0b0011'1100'0000);
+static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 0b0000'0000'0100);
+static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 0b0000'0000'1000);
+static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 0);
+static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 0);
+static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 0);
+static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 0);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 7);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 1);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 4);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 2);
 
-static_assert(generate_extraction_info<u32, 12, "5|4~0|4:0">()[0].first == -7);
-static_assert(generate_extraction_info<u32, 12, "5|4~0|4:0">()[1].first == -2);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5|4~0|4:0">()[0]) == 7);
+static_assert(std::get<2>(generate_extraction_info<u32, 12, "5|4~0|4:0">()[1]) == 2);
 
 }
 
@@ -226,8 +227,8 @@ constexpr auto extract(T v) -> T {
     constexpr auto extraction_info = detail::generate_extraction_info<T, StartBitMSB, Pattern>();
 
     u32 ret = 0;
-    for (auto& segment : extraction_info) {
-        ret |= detail::left_shift<u32>(v, segment.first) & segment.second;
+    for (auto& [mask, left_shift, right_shift] : extraction_info) {
+        ret |= detail::compound_shift<u32>(v, left_shift, right_shift) & mask;
     }
 
     return ret;
