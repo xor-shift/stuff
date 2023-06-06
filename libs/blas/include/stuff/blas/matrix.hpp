@@ -127,7 +127,7 @@ struct matrix {
         return {std::span<T>(m_data + i, Rows * Cols - i)};
     }
 
-    static constexpr auto identity() -> concepts::nd_matrix_of_t<T, Rows, Cols> auto requires(Rows == Cols);
+    static constexpr auto identity() -> matrix requires(Rows == Cols);
 
     static constexpr auto rotate(T theta) -> matrix requires(Rows == Cols && Rows == 2);
 

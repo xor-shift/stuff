@@ -44,22 +44,32 @@ struct try_helper<const volatile T> : try_helper<T> {};
 
 }  // namespace stf::detail
 
-#define TRYX_NUMBERED(_no, ...)                                                               \
-    ({                                                                                        \
-        auto _res_##_no = (__VA_ARGS__);                                                      \
+#define TRYX_NUMBERED(_no, ...)                                                     \
+    ({                                                                              \
+        auto _res_##_no = (__VA_ARGS__);                                            \
         using _helper_type_##_no = ::stf::detail::try_helper<decltype(_res_##_no)>; \
-        if (!_helper_type_##_no::has_value(_res_##_no)) {                                     \
-            return _helper_type_##_no::error(std::move(_res_##_no));                          \
-        }                                                                                     \
-        _helper_type_##_no::value(std::move(_res_##_no));                                     \
+        if (!_helper_type_##_no::has_value(_res_##_no)) {                           \
+            return _helper_type_##_no::error(std::move(_res_##_no));                \
+        }                                                                           \
+        _helper_type_##_no::value(std::move(_res_##_no));                           \
     })
 
-#define TRYX(...)                                                                 \
-    ({                                                                            \
-        auto _res = (__VA_ARGS__);                                                \
+#define TRYX(...)                                                       \
+    ({                                                                  \
+        auto _res = (__VA_ARGS__);                                      \
         using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
-        if (!_helper_type::has_value(_res)) {                                     \
-            return _helper_type::error(std::move(_res));                          \
-        }                                                                         \
-        _helper_type::value(std::move(_res));                                     \
+        if (!_helper_type::has_value(_res)) {                           \
+            return _helper_type::error(std::move(_res));                \
+        }                                                               \
+        _helper_type::value(std::move(_res));                           \
+    })
+
+#define TRY_OR_BREAK(...)                                               \
+    ({                                                                  \
+        auto _res = (__VA_ARGS__);                                      \
+        using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
+        if (!_helper_type::has_value(_res)) {                           \
+            break;                                                      \
+        }                                                               \
+        _helper_type::value(std::move(_res));                           \
     })

@@ -3,6 +3,28 @@
 #include <cfenv>
 #include <functional>
 
+// emscripten hacks
+
+#ifndef FE_DIVBYZERO
+# define FE_DIVBYZERO 1
+#endif
+
+#ifndef FE_INEXACT
+# define FE_INEXACT 2
+#endif
+
+#ifndef FE_INVALID
+# define FE_INVALID 4
+#endif
+
+#ifndef FE_OVERFLOW
+# define FE_OVERFLOW 8
+#endif
+
+#ifndef FE_UNDERFLOW
+# define FE_UNDERFLOW 16
+#endif
+
 namespace stf::sfloat {
 
 enum class rounding : int {

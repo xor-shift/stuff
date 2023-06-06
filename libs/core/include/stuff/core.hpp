@@ -182,6 +182,7 @@ constexpr void unreachable_with_message() {
 }
 };  // namespace stf
 
+#include <string_view>
+
 using namespace std::literals;
 using namespace std::string_view_literals;
-using namespace std::string_literals;

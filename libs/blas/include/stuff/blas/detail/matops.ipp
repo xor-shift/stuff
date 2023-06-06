@@ -15,8 +15,7 @@ constexpr auto identity_matrix() -> matrix_type<T, Size, Size> {
 }
 
 template<typename T, usize Rows, usize Cols>
-constexpr auto matrix<T, Rows, Cols>::identity()
-  -> concepts::nd_matrix_of_t<T, Rows, Cols> auto requires(Rows == Cols)  // this comment is here for clang-format
+constexpr auto matrix<T, Rows, Cols>::identity() -> matrix requires(Rows == Cols)
 {
     matrix ret{};
     for (usize i = 0; i < Rows; i++) {
@@ -141,8 +140,7 @@ namespace detail {
 
 template<concepts::matrix T, concepts::matrix U, typename Fn>
     requires(T::rows == U::rows && T::cols == U::cols)
-constexpr auto elementwise_fn(T const& lhs, U const& rhs, Fn&& functor = {})
-  -> concepts::nd_matrix<T::cols, T::rows> auto{
+constexpr auto elementwise_fn(T const& lhs, U const& rhs, Fn&& functor = {}) -> concepts::nd_matrix<T::cols, T::rows> auto{
     using ret_value_type = decltype(typename T::value_type{} + typename U::value_type{});
     using ret_type = typename T::template rebind_n<ret_value_type, T::rows, T::cols>;
     concepts::matrix_backend auto ret = ret_type{};
