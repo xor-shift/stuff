@@ -4,6 +4,7 @@
 #include <stuff/random/dist/erand48.hpp>
 
 #include <cmath>
+#include <numbers>
 
 namespace stf::random {
 
