@@ -7,6 +7,8 @@
 #include <stuff/core/type_exists.hpp>
 #include <stuff/core/visitor.hpp>
 
+#include <utility>
+
 namespace stf {
 
 // this place is currently a dumping ground for uncategorized functions and types

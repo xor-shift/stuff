@@ -3,6 +3,7 @@
 #include <stuff/core/integers.hpp>
 
 #include <algorithm>
+#include <iterator>
 
 namespace stf {
 
