@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#define STF_INTRO_RUN_CT_TESTS 1
+
 #include <stuff/intro/introspectors/array.hpp>
 #include <stuff/intro/introspectors/span.hpp>
 #include <stuff/intro/introspectors/tuple.hpp>

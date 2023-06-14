@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <thread>
+
 struct watchdog {
     template<typename Rep, typename Period>
     watchdog(std::chrono::duration<Rep, Period> fail_after)

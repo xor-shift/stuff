@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <numbers>
+
 template<template<typename T, usize Rows, usize Cols> class matrix>
     requires(stf::blas::concepts::matrix_backend<matrix<int, 2, 4>>)
 void basic_test_matrix_type() {

@@ -83,3 +83,13 @@ struct try_helper<const volatile T> : try_helper<T> {};
         }                                                               \
         _helper_type::value(std::move(_res));                           \
     })
+
+#define TRY_OR_RETURN(_try_expr, ...)                                   \
+    ({                                                                  \
+        auto _res = (_try_expr);                                        \
+        using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
+        if (!_helper_type::has_value(_res)) {                           \
+            return (__VA_ARGS__);                                       \
+        }                                                               \
+        _helper_type::value(std::move(_res));                           \
+    })
