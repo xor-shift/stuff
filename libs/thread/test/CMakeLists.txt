@@ -6,6 +6,9 @@ add_executable(${PROJECT_NAME}
         channel.cpp
         )
 
-sanitize(${PROJECT_NAME})
+#sanitize(${PROJECT_NAME})
+
+target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
+target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
 
 target_link_libraries(${PROJECT_NAME} stf::thread gtest gtest_main)

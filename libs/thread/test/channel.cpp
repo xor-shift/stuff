@@ -6,8 +6,9 @@
 
 struct watchdog {
     template<typename Rep, typename Period>
-    watchdog(std::chrono::duration<Rep, Period> fail_after)
-        : m_thread([this, fail_after] { worker(fail_after); }) {}
+    watchdog(std::chrono::duration<Rep, Period> fail_after) {
+        m_thread = std::thread([this, fail_after] { worker(fail_after); });
+    }
 
     ~watchdog() {
         cancel();

@@ -5,7 +5,7 @@ namespace stf::sfloat::ieee {
 template<concepts::ieee_float_description Desc>
 constexpr auto trunc(soft_float<Desc> v, fenv& env) -> soft_float<Desc> {
     using signed_type = std::make_signed_t<typename Desc::repr_type>;
-    using unsigned_type = typename Desc::repr_type;
+    // using unsigned_type = typename Desc::repr_type;
 
     signed_type real_exponent = v.real_exponent();
 

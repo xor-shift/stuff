@@ -64,6 +64,18 @@ struct try_helper<const volatile T> : try_helper<T> {};
         _helper_type::value(std::move(_res));                           \
     })
 
+#define TRYX_CORO(...)                                                  \
+    ({                                                                  \
+        auto _res = (__VA_ARGS__);                                      \
+        using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
+        if (!_helper_type::has_value(_res)) {                           \
+            auto&& rv = std::move(_res);                                \
+            auto res = _helper_type::error(std::move(rv));              \
+            co_return res;                                              \
+        }                                                               \
+        _helper_type::value(std::move(_res));                           \
+    })
+
 #define UNWRAP(...)                                                     \
     ({                                                                  \
         auto _res = (__VA_ARGS__);                                      \

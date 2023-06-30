@@ -52,7 +52,7 @@ constexpr auto tuple_call(Fn&& fn, Tuple&& tuple)
 
 static_assert(tuple_call([](int a, int b) -> int { return a + b; }, std::make_tuple(1, 2)) == 3);
 // static_assert(!requires { tuple_call([](int a, int b) -> int { return a + b; }, std::make_tuple(1, 2, 3)); });
-static_assert(tuple_call([]<typename T>(T&& v) -> bool { return !std::is_reference_v<T>; }, std::make_tuple(1)));
+static_assert(tuple_call([]<typename T>(T&&) -> bool { return !std::is_reference_v<T>; }, std::make_tuple(1)));
 
 namespace detail {
 

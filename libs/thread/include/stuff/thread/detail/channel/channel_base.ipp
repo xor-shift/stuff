@@ -2,8 +2,8 @@
 
 namespace stf {
 
-template<typename ValueType, usize N, typename T>
-constexpr void channel_base<ValueType, N, T>::close() {
+template<typename ValueType, usize N, typename Mutex, typename T>
+constexpr void channel_base<ValueType, N, Mutex, T>::close() {
     std::unique_lock lock{m_mutex};
     m_closed = true;
 
@@ -15,9 +15,9 @@ constexpr void channel_base<ValueType, N, T>::close() {
     }
 }
 
-template<typename ValueType, usize N, typename T>
+template<typename ValueType, usize N, typename Mutex, typename T>
 template<typename... Args>
-constexpr auto channel_base<ValueType, N, T>::emplace_back(Args&&... args) -> bool {
+constexpr auto channel_base<ValueType, N, Mutex, T>::emplace_back(Args&&... args) -> bool {
     std::unique_lock lock{m_mutex};
 
     if (closed()) {
@@ -60,8 +60,8 @@ constexpr auto channel_base<ValueType, N, T>::emplace_back(Args&&... args) -> bo
     return true;
 }
 
-template<typename ValueType, usize N, typename T>
-auto channel_base<ValueType, N, T>::attach_receiver(
+template<typename ValueType, usize N, typename Mutex, typename T>
+auto channel_base<ValueType, N, Mutex, T>::attach_receiver(
   std::shared_ptr<detail::chan_receive_syncer> recv_sync,
   std::optional<value_type>& recv_buffer,
   usize id
@@ -114,8 +114,8 @@ auto channel_base<ValueType, N, T>::attach_receiver(
     return false;
 }
 
-template<typename ValueType, usize N, typename T>
-void channel_base<ValueType, N, T>::detach_receiver() {
+template<typename ValueType, usize N, typename Mutex, typename T>
+void channel_base<ValueType, N, Mutex, T>::detach_receiver() {
     std::unique_lock lock{m_mutex};
 
     m_receive_sync = nullptr;
@@ -124,8 +124,8 @@ void channel_base<ValueType, N, T>::detach_receiver() {
     m_cv_to_receivers.notify_all();
 }
 
-template<typename ValueType, usize N, typename T>
-constexpr void channel_base<ValueType, N, T>::fulfill_receiver(std::optional<value_type> value) {
+template<typename ValueType, usize N, typename Mutex, typename T>
+constexpr void channel_base<ValueType, N, Mutex, T>::fulfill_receiver(std::optional<value_type> value) {
     std::unique_lock lock{m_receive_sync->recv_mutex};
     m_receive_sync->recv_fulfilled = m_receive_fulfill_id;
     m_receive_sync->recv_cv.notify_all();

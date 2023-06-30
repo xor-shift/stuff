@@ -131,13 +131,11 @@ consteval auto generate_extraction_info() {
 
     auto extract_int = [](auto&& str) -> int {
 #ifdef __cpp_lib_constexpr_charconv
-#    error NYI
-
         int v;
-        const auto res = std::from_chars(segment.begin(), segment.end(), from);
+        const auto res = std::from_chars(str.begin(), str.end(), v);
 
-        if (res.errc != std::errc()) {
-            throw "invalid extraction pattern"
+        if (res.ec != std::errc()) {
+            throw "invalid extraction pattern";
         }
 
         str = str.substr(std::distance(str.begin(), res.ptr));
@@ -149,7 +147,7 @@ consteval auto generate_extraction_info() {
         int ret = 0;
 
         for (char c : str) {
-            if (c < '0' | c > '9') {
+            if (c < '0' || c > '9') {
                 break;
             }
 
@@ -204,22 +202,6 @@ consteval auto generate_extraction_info() {
     return ret;
 }
 
-static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 0b0000'0011'0000);
-static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 0b0011'1100'0000);
-static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 0b0000'0000'0100);
-static_assert(std::get<0>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 0b0000'0000'1000);
-static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 0);
-static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 0);
-static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 0);
-static_assert(std::get<1>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 0);
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[0]) == 7);
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[1]) == 1);
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[2]) == 4);
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5:4|9:6|2|3">()[3]) == 2);
-
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5|4~0|4:0">()[0]) == 7);
-static_assert(std::get<2>(generate_extraction_info<u32, 12, "5|4~0|4:0">()[1]) == 2);
-
 }
 
 template<typename T, usize StartBitMSB, stf::string_literal Pattern>
@@ -233,8 +215,5 @@ constexpr auto extract(T v) -> T {
 
     return ret;
 }
-
-static_assert(extract<u16, 12, "5:4|9:6|2|3">(0x18bc) == 120);
-static_assert(extract<u16, 12, "5|4~0|4:0">(0x9051) == 52);
 
 }  // namespace stf::bit

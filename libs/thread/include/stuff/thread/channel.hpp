@@ -28,9 +28,10 @@ static auto receive(Channel& chan) -> std::optional<typename Channel::value_type
 template<typename Channel, typename... Args>
 static auto send(Channel& chan, Args&&... args) -> bool;
 
-template<typename ValueType, usize N, typename T>
+template<typename ValueType, usize N, typename Mutex, typename T>
 struct channel_base {
     using value_type = ValueType;
+    using mutex_type = Mutex;
 
     friend T;
 
@@ -47,11 +48,7 @@ protected:
     /// If false and !recv_buffer, the channel is closed and no data can be received OR the recv_sync was already
     /// fulfilled.\n
     /// If false and !!recv_buffer, there was buffered data prepared.
-    auto attach_receiver(
-      std::shared_ptr<detail::chan_receive_syncer> recv_sync,
-      std::optional<value_type>& recv_buffer,
-      usize id = 1
-    ) -> bool;
+    auto attach_receiver(std::shared_ptr<detail::chan_receive_syncer> recv_sync, std::optional<value_type>& recv_buffer, usize id = 1) -> bool;
 
     /// Cancels a receive (should only be used by select())
     void detach_receiver();
@@ -69,7 +66,7 @@ protected:
     friend struct channel_selector;
 
 private:
-    mutable std::mutex m_mutex{};
+    mutable mutex_type m_mutex{};
 
     bool m_closed = false;
 
@@ -104,12 +101,12 @@ private:
     constexpr auto pop_immediately() -> value_type { return get_self().pop_immediately(); }
 };
 
-template<typename T, usize N = 0, typename Allocator = std::allocator<T>>
-struct channel : channel_base<T, N, channel<T, N, Allocator>> {
+template<typename T, usize N = 0, typename Mutex = std::mutex, typename Allocator = std::allocator<T>>
+struct channel : channel_base<T, N, Mutex, channel<T, N, Mutex, Allocator>> {
     using value_type = T;
     using allocator_type = Allocator;
 
-    friend struct channel_base<T, N, channel<T, N, Allocator>>;
+    friend struct channel_base<T, N, Mutex, channel<T, N, Mutex, Allocator>>;
 
     channel(allocator_type const& allocator = {});
 
@@ -127,12 +124,12 @@ private:
     constexpr auto pop_immediately() -> value_type;
 };
 
-template<usize N, typename Allocator>
-struct channel<void, N, Allocator> : channel_base<empty, N, channel<void, N, Allocator>> {
+template<usize N, typename Mutex, typename Allocator>
+struct channel<void, N, Mutex, Allocator> : channel_base<empty, N, Mutex, channel<void, N, Mutex, Allocator>> {
     using value_type = empty;
     using allocator_type = Allocator;
 
-    friend struct channel_base<empty, N, channel<void, N, Allocator>>;
+    friend struct channel_base<empty, N, Mutex, channel<void, N, Mutex, Allocator>>;
 
     channel() = default;
 
@@ -168,8 +165,7 @@ struct channel_selector_base {
 }  // namespace detail
 
 template<typename Channel, typename Fn>
-struct channel_selector final
-    : detail::channel_selector_base<std::invoke_result_t<Fn, std::optional<typename Channel::value_type>>> {
+struct channel_selector final : detail::channel_selector_base<std::invoke_result_t<Fn, std::optional<typename Channel::value_type>>> {
     using value_type = std::invoke_result_t<Fn, std::optional<typename Channel::value_type>>;
 
     template<typename Fnn>
@@ -179,9 +175,7 @@ struct channel_selector final
 
     // if false, selection should conclude without waiting (the channel just closed or was closed or a buffered result
     // existed)
-    auto attach(std::shared_ptr<detail::chan_receive_syncer> recv_sync, usize id) -> bool final override {
-        return m_channel.attach_receiver(recv_sync, m_recv_buffer, id);
-    }
+    auto attach(std::shared_ptr<detail::chan_receive_syncer> recv_sync, usize id) -> bool final override { return m_channel.attach_receiver(recv_sync, m_recv_buffer, id); }
 
     auto fulfilled() -> value_type final override {
         if constexpr (std::is_void_v<value_type>) {
