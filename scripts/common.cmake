@@ -1,0 +1,12 @@
+function(sanitize target)
+    target_compile_options(${target} PRIVATE -fsanitize=address -static-libasan -fsanitize=undefined)
+    target_link_options(${target} PRIVATE -fsanitize=address -static-libasan -fsanitize=undefined)
+endfunction()
+
+function(optimize_or_sanitize target)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        sanitize(${PROJECT_NAME})
+    elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_options(${target} PUBLIC -ffast-math -march=native -mtune=native)
+    endif ()
+endfunction()
