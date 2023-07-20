@@ -18,9 +18,19 @@ namespace stf {
 /// <code>chan struct{}</code> from Go))
 struct empty {};
 
-constexpr void assume(bool pred) {
+constexpr void assume(bool pred, const char* message = nullptr) noexcept {
     if (!pred) {
+#ifdef NDEBUG
         std::unreachable();
+#else
+#    pragma GCC diagnstic push
+#    pragma GCC diagnstic ignored "-Wterminate" // that's the goal
+        using namespace std::string_literals;
+
+        auto&& real_message = message != nullptr ? "assumption failed: "s + message : "assumption failed"s;
+        throw std::runtime_error(real_message);
+#    pragma GCC diagnstic pop
+#endif
     }
 }
 
@@ -28,6 +38,7 @@ template<string_literal Lit>
 constexpr void unreachable_with_message() {
     std::unreachable();
 }
+
 };  // namespace stf
 
 #include <string_view>

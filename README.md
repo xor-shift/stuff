@@ -20,5 +20,4 @@ Stuff© Libraries™ is a poorly made set of utilities inspired by boost.
 - `scope`: Scope utilities from
   [Library fundamentals TS v3](https://cplusplus.github.io/fundamentals-ts/v3.html#scopeguard.exit)
 - `sfloat`: Soft-float library, very WIP, no arithmetic
-- `thread`: Concurrency utilities. Includes `sync.WaitGroup` and `chan` analogues from Go (`stf::channel` is pretty
-  close to Go's spec (`select(...)` isn't randomised but that's about it))
+- `thread`: Concurrency utilities

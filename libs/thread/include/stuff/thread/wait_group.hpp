@@ -17,26 +17,22 @@ struct wait_group {
     void add(u32 delta) noexcept { m_count.fetch_add(delta, std::memory_order::release); }
 
     void done() {
-        u32 res = m_count.fetch_sub(1, std::memory_order::seq_cst);
+        const auto res = m_count.fetch_sub(1, std::memory_order::seq_cst);
 
         if (res == 0) {
             throw std::runtime_error("called done() on a wait_group with a counter of 0");
         }
 
         if (res == 1) {
-            std::unique_lock cv_lock(m_mutex);
+            const auto _ = std::unique_lock(m_mutex);
             m_cv.notify_all();
         }
     }
 
     void wait() {
-        std::unique_lock cv_lock(m_mutex);
+        auto lock = std::unique_lock(m_mutex);
 
-        if (m_count.load(std::memory_order::acquire) == 0) {
-            return;
-        }
-
-        m_cv.wait(cv_lock, [this] { return m_count.load(std::memory_order::acquire) == 0; });
+        m_cv.wait(lock, [this] { return m_count.load(std::memory_order::acquire) == 0; });
     }
 
 private:
