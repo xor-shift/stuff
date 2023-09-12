@@ -108,9 +108,7 @@ constexpr auto reverse_bytes(T v) -> T {
             char& a = p[i];
             char& b = p[sizeof(T) - i - 1];
 
-            auto t = a;
-            a = b;
-            b = t;
+            std::swap(a, b);
         }
         return v;
     }

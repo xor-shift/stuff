@@ -5,6 +5,7 @@
 #include <stuff/scope/scope_guard.hpp>
 
 #include <exception>
+#include <expected>
 #include <memory>
 #include <variant>
 
@@ -53,6 +54,40 @@ public:
 
     template<typename U>
     using rebind = expected<U, E>;
+
+    constexpr expected(std::expected<T, E>&& other)
+        : m_has_value((bool)other) {
+        if (m_has_value) {
+            std::construct_at(std::addressof(m_value), std::move(other).value());
+        } else {
+            std::construct_at(std::addressof(m_unexpected), std::move(other).error());
+        }
+    }
+
+    constexpr expected(std::expected<T, E> const& other)
+        : m_has_value((bool)other) {
+        if (m_has_value) {
+            std::construct_at(std::addressof(m_value), other.value());
+        } else {
+            std::construct_at(std::addressof(m_unexpected), other.error());
+        }
+    }
+
+    constexpr expected(std::unexpected<E>&& unexpect)
+        : expected(stf::unexpected(std::move(unexpect).error())) {
+    }
+
+    constexpr expected(std::unexpected<E> const& unexpect)
+        : expected(stf::unexpected(unexpect.error())) {
+    }
+
+    constexpr operator std::expected<T, E>() {
+        if (has_value()) {
+            return std::move(m_value);
+        }
+
+        return std::unexpected<E>(std::move(m_unexpected));
+    }
 
     // clang-format off
 
@@ -179,11 +214,13 @@ public:
     : m_unexpected(il, std::forward<Args>(args)...)
     , m_has_value(false) {}
 
-    // FIXME: this should be fixed by clang 16 (?)
-    // constexpr ~expected() = default;
+    // dontFIXME: this should be fixed by clang 16 (?)
+    // update from the future (270823): it has been fixed
+    // i will slowly move to std::expected now
+    constexpr ~expected() = default;
 
     constexpr ~expected()
-        //requires (!std::is_trivially_destructible_v<T>) || (!std::is_trivially_destructible_v<E>)
+        requires (!std::is_trivially_destructible_v<T>) || (!std::is_trivially_destructible_v<E>)
     {
         if (m_has_value) {
             std::destroy_at(std::addressof(m_value));
@@ -499,6 +536,42 @@ public:
         : m_value()
         , m_has_value(true) {}
 
+    template<typename Other>
+    constexpr expected(std::expected<void, E>&& other)
+        : m_has_value((bool)other) {
+        if (m_has_value) {
+            std::construct_at(std::addressof(m_value));
+        } else {
+            std::construct_at(std::addressof(m_unexpected), std::move(other).error());
+        }
+    }
+
+    template<typename Other>
+    constexpr expected(std::expected<void, E> const& other)
+        : m_has_value((bool)other) {
+        if (m_has_value) {
+            std::construct_at(std::addressof(m_value));
+        } else {
+            std::construct_at(std::addressof(m_unexpected), other.error());
+        }
+    }
+
+    constexpr expected(std::unexpected<E>&& unexpect)
+        : expected(stf::unexpected(std::move(unexpect)).error()) {
+    }
+
+    constexpr expected(std::unexpected<E> const& unexpect)
+        : expected(stf::unexpected(unexpect.error())) {
+    }
+
+    constexpr operator std::expected<void, E>() {
+        if (has_value()) {
+            return {};
+        }
+
+        return std::unexpected<E>(std::move(m_unexpected));
+    }
+
     // clang-format off
 
     constexpr expected(expected const& other) = default;
@@ -586,12 +659,12 @@ public:
     : m_value()
     , m_has_value(true) {}
 
-    // FIXME: read the fixme above for non-void T specialized `expected`
-    // constexpr ~expected() = default;
+    // dontFIXME: read the fixme above for non-void T specialized `expected`
+    constexpr ~expected() = default;
 
     constexpr ~expected()
         noexcept(std::is_nothrow_destructible_v<E>)
-        //requires (!std::is_trivially_destructible_v<E>)
+        requires (!std::is_trivially_destructible_v<E>)
     {
         if (!m_has_value) {
             std::destroy_at(std::addressof(m_unexpected));

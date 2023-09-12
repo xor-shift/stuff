@@ -23,13 +23,18 @@ constexpr void assume(bool pred, const char* message = nullptr) noexcept {
 #ifdef NDEBUG
         std::unreachable();
 #else
-#    pragma GCC diagnstic push
-#    pragma GCC diagnstic ignored "-Wterminate" // that's the goal
         using namespace std::string_literals;
 
         auto&& real_message = message != nullptr ? "assumption failed: "s + message : "assumption failed"s;
+
+#    pragma GCC diagnostic push
+#    ifdef __clang__
+#        pragma GCC diagnostic ignored "-Wexceptions"
+#    else
+#        pragma GCC diagnostic ignored "-Wterminate"
+#    endif
         throw std::runtime_error(real_message);
-#    pragma GCC diagnstic pop
+#    pragma GCC diagnostic pop
 #endif
     }
 }

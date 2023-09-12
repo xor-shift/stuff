@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <utility>
 
 namespace stf {
@@ -30,6 +31,22 @@ struct unexpected {
       Args&&... args
     ) noexcept(std::is_nothrow_constructible_v<E, std::initializer_list<U>&, Args...>)
         : m_data(il, std::forward<Args>(args)...) {}
+
+    constexpr unexpected(std::unexpected<E>&& other)
+        : m_data(std::move(other).error()) {
+    }
+
+    constexpr unexpected(std::unexpected<E> const& other)
+        : m_data(other.error()) {
+    }
+
+    constexpr operator std::unexpected<E>() && {
+        return std::unexpected<E>(std::move(m_data));
+    }
+
+    constexpr operator std::unexpected<E>() const& {
+        return std::unexpected<E>(m_data);
+    }
 
     constexpr auto operator=(unexpected const&) -> unexpected& = default;
     constexpr auto operator=(unexpected&&) -> unexpected& = default;
@@ -72,6 +89,9 @@ struct is_unexpected : std::bool_constant<false> {};
 
 template<typename T>
 struct is_unexpected<unexpected<T>> : std::bool_constant<true> {};
+
+template<typename T>
+struct is_unexpected<std::unexpected<T>> : std::bool_constant<true> {};
 
 template<typename T>
 struct is_unexpected<const T> : is_unexpected<T> {};
