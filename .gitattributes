@@ -1,0 +1,4 @@
+libs/ply/test/cow_binary.cpp -linguist-detectable
+libs/ply/test/cow_ascii.cpp -linguist-detectable
+libs/stl/test/sphericon.stl.h -linguist-detectable
+libs/stl/test/utah_teapot.stl.h -linguist-detectable
