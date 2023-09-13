@@ -4,7 +4,7 @@
 
 #include <utility>
 
-namespace stf::scope {
+namespace stf {
 
 template<typename R, typename D>
 struct unique_resource {

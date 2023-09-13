@@ -5,7 +5,7 @@
 
 #include <stuff/scope/detail/scope_guard.ipp>
 
-namespace stf::scope {
+namespace stf {
 
 template<typename EF>
 struct scope_exit : detail::scope_base<EF> {

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace stf::scope::detail {
+namespace stf::detail {
 
 template<typename Fn>
     requires std::is_nothrow_move_constructible_v<Fn> &&  //
