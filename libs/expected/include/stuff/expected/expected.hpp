@@ -501,7 +501,7 @@ private:
                 std::construct_at(&prev_backup, std::move(*prev));
                 std::destroy_at(prev);
 
-                scope::detail::simple_guard guard([&] noexcept { std::construct_at(prev, std::move(prev_backup)); });
+                detail::simple_guard guard([&] noexcept { std::construct_at(prev, std::move(prev_backup)); });
 
                 std::construct_at(target, std::forward<U>(v));  // possible exception
 
