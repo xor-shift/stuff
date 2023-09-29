@@ -11,6 +11,18 @@ namespace stf::intro {
 template<typename T>
 struct function_introspector;
 
+template<typename T>
+struct function_introspector<T const&> : function_introspector<T> {};
+
+template<typename T>
+struct function_introspector<T&> : function_introspector<T> {};
+
+template<typename T>
+struct function_introspector<T const&&> : function_introspector<T> {};
+
+template<typename T>
+struct function_introspector<T&&> : function_introspector<T> {};
+
 template<typename Ret>
 struct function_introspector<Ret()> {
     using return_type = Ret;
@@ -21,6 +33,9 @@ struct function_introspector<Ret()> {
     using nth_argument = void;
 };
 
+template<typename Ret>
+struct function_introspector<Ret() noexcept> : function_introspector<Ret()> {};
+
 template<typename Ret, typename Arg, typename... Args>
 struct function_introspector<Ret(Arg, Args...)> {
     using return_type = Ret;
@@ -30,6 +45,9 @@ struct function_introspector<Ret(Arg, Args...)> {
     using nth_argument = typename stf::bunch_of_types<Arg, Args...>::template nth_type<I>;
 };
 
+template<typename Ret, typename Arg, typename... Args>
+struct function_introspector<Ret(Arg, Args...) noexcept> : function_introspector<Ret(Arg, Args...)> {};
+
 template<typename Ret, typename... Args>
 struct function_introspector<Ret (*)(Args...)> : function_introspector<Ret(Args...)> {};
 
@@ -38,8 +56,22 @@ namespace detail {
 template<typename Class, typename Func>
 struct call_operator_helper;
 
+template<typename Class, typename Func>
+struct call_operator_helper<Class const&, Func> : call_operator_helper<Class, Func> {};
+
+template<typename Class, typename Func>
+struct call_operator_helper<Class&, Func> : call_operator_helper<Class, Func> {};
+
+template<typename Class, typename Func>
+struct call_operator_helper<Class const&&, Func> : call_operator_helper<Class, Func> {};
+
+template<typename Class, typename Func>
+struct call_operator_helper<Class&&, Func> : call_operator_helper<Class, Func> {};
+
 template<typename Class, typename Ret, typename... Args>
 struct call_operator_helper<Class, Ret (*)(Args...)> : function_introspector<Ret(Args...)> {};
+
+///
 
 template<typename Class, typename Ret>
 struct call_operator_helper<Class, Ret (Class::*)()> {
@@ -68,6 +100,18 @@ struct call_operator_helper<Class, Ret (Class::*)(Args...) volatile> : call_oper
 
 template<typename Class, typename Ret, typename... Args>
 struct call_operator_helper<Class, Ret (Class::*)(Args...) const volatile> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
+
+template<typename Class, typename Ret, typename... Args>
+struct call_operator_helper<Class, Ret (Class::*)(Args...) noexcept> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
+
+template<typename Class, typename Ret, typename... Args>
+struct call_operator_helper<Class, Ret (Class::*)(Args...) const noexcept> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
+
+template<typename Class, typename Ret, typename... Args>
+struct call_operator_helper<Class, Ret (Class::*)(Args...) volatile noexcept> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
+
+template<typename Class, typename Ret, typename... Args>
+struct call_operator_helper<Class, Ret (Class::*)(Args...) const volatile noexcept> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
 
 }  // namespace detail
 
