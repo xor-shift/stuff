@@ -113,10 +113,24 @@ struct call_operator_helper<Class, Ret (Class::*)(Args...) volatile noexcept> : 
 template<typename Class, typename Ret, typename... Args>
 struct call_operator_helper<Class, Ret (Class::*)(Args...) const volatile noexcept> : call_operator_helper<Class, Ret (Class::*)(Args...)> {};
 
-}  // namespace detail
+struct call_operator_checker_helper {
+    constexpr void operator()() const noexcept {}
+};
 
 template<typename T>
-    requires requires() { &T::operator(); }
+concept unambigously_has_call_operator = requires { &T::operator(); };
+
+template<typename T>
+    requires std::is_class_v<std::remove_cvref_t<T>>
+struct call_operator_checker : call_operator_checker_helper, std::remove_cvref_t<T> {};
+
+template<typename T>
+concept has_call_operator = !unambigously_has_call_operator<call_operator_checker<T>>;
+
+}  // namespace detail
+
+template<detail::has_call_operator T>
+    requires detail::unambigously_has_call_operator<T>
 struct function_introspector<T> : detail::call_operator_helper<T, decltype(&T::operator())> {};
 
 }  // namespace stf::intro
