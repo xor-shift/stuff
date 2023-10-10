@@ -86,7 +86,7 @@ TEST(elf, program_header_32) {
 
     ASSERT_TRUE(static_cast<bool>(elf)) << "error: " << (elf.has_value() ? "" : elf.error());
 
-    const stf::expected<elf::program_header, std::string_view> p_hdrs[]{
+    const std::expected<elf::program_header, std::string_view> p_hdrs[]{
       elf->get_program_header(0),
       elf->get_program_header(1),
       elf->get_program_header(2),

@@ -56,7 +56,7 @@ struct header {
     u16 segment_names_index;               //!< e_shstrndx
 
     template<usize Extent = std::dynamic_extent>
-    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> stf::expected<header, std::string_view> {
+    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> std::expected<header, std::string_view> {
         auto ret = header{.e_ident = TRYX(identification::from_bytes(bytes))};
 
         auto consumer = detail::data_consumer{
@@ -67,7 +67,7 @@ struct header {
         };
 
         if (bytes.size() < (consumer.is_64 ? 64 : 52)) {
-            return stf::unexpected{"not enough bytes for an elf header"};
+            return std::unexpected{"not enough bytes for an elf header"};
         }
 
         ret.elf_type = consumer.consume(std::type_identity<u16>{});
@@ -87,7 +87,7 @@ struct header {
         ret.segment_names_index = consumer.consume(std::type_identity<u16>{});
 
         if (auto err = ret.get_error(); err) {
-            return stf::unexpected{*err};
+            return std::unexpected{*err};
         }
 
         return ret;

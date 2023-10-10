@@ -18,13 +18,13 @@ struct context {
         : m_iter(std::ranges::begin(range))
         , m_sentinel(std::ranges::end(range)) {}
 
-    constexpr auto read_header() -> stf::expected<file_header, error> { return m_header = TRYX(read_header_impl()); }
+    constexpr auto read_header() -> std::expected<file_header, error> { return m_header = TRYX(read_header_impl()); }
 
     constexpr auto header() const& -> file_header const& { return m_header; }
     constexpr auto header() & -> file_header& { return m_header; }
 
     template<typename ElementType>
-    constexpr auto read_element(usize element_index) -> stf::expected<ElementType, error> {
+    constexpr auto read_element(usize element_index) -> std::expected<ElementType, error> {
         using element_traits = detail::element_traits<ElementType>;
 
         if constexpr (element_traits::property_count == 0) {
@@ -53,7 +53,7 @@ private:
     usize m_binary_offset = 0;
     file_header m_header;
 
-    constexpr auto read_line() -> stf::expected<detail::line, error> {
+    constexpr auto read_line() -> std::expected<detail::line, error> {
         auto ret = std::string{};
 
         while (m_iter != m_sentinel) {
@@ -73,13 +73,13 @@ private:
             ret.push_back(c);
         }
 
-        return stf::unexpected{error{
+        return std::unexpected{error{
           .m_class = error_class::premature_eof,
           .m_location = std::monostate{},
         }};
     }
 
-    constexpr auto read_header_impl() -> stf::expected<file_header, error> {
+    constexpr auto read_header_impl() -> std::expected<file_header, error> {
         TRYX(parse_magic_line(TRYX(read_line()).tokens()));
 
         enum class state {
@@ -100,7 +100,7 @@ private:
             end_header,
         };
 
-        constexpr auto get_line_type = [](detail::token leading) -> stf::expected<line_type, error> {
+        constexpr auto get_line_type = [](detail::token leading) -> std::expected<line_type, error> {
             if (leading.m_content == "ply") {
                 return line_type::magic;
             }
@@ -157,7 +157,7 @@ private:
             ret.m_elements.emplace_back(std::move(*candidate));
         };
 
-        auto process_element = [&flush_element, &cur_elem](std::span<const detail::token> tokens, usize row) -> stf::expected<void, error> {
+        auto process_element = [&flush_element, &cur_elem](std::span<const detail::token> tokens, usize row) -> std::expected<void, error> {
             flush_element();
 
             cur_elem = TRYX(element::from_tokens(tokens, row));
@@ -165,9 +165,9 @@ private:
             return {};
         };
 
-        auto process_property = [&cur_elem](std::span<const detail::token> tokens, usize row) -> stf::expected<void, error> {
+        auto process_property = [&cur_elem](std::span<const detail::token> tokens, usize row) -> std::expected<void, error> {
             if (!cur_elem) {
-                return stf::unexpected{error::new_line_error(error_class::internal, row, "state is expecting_property despite cur_elem being std::nullopt")};
+                return std::unexpected{error::new_line_error(error_class::internal, row, "state is expecting_property despite cur_elem being std::nullopt")};
             }
 
             cur_elem->m_properties.emplace_back(TRYX(property::from_tokens(tokens, row)));
@@ -245,7 +245,7 @@ private:
     }
 
     template<typename ElementType, usize I = 0>
-    constexpr auto read_element_impl_ascii(ElementType& out, std::span<const detail::token> tokens) -> stf::expected<void, error> {
+    constexpr auto read_element_impl_ascii(ElementType& out, std::span<const detail::token> tokens) -> std::expected<void, error> {
         using element_traits = detail::element_traits<ElementType>;
         using property = element_traits::template nth_type<I>;
         using property_traits = detail::property_traits<property>;
@@ -266,7 +266,7 @@ private:
     }
 
     template<typename ElementType, usize I = 0>
-    constexpr auto read_element_impl_binary(ElementType& out, std::endian endianness, std::span<const property> property_descriptions) -> stf::expected<void, error> {
+    constexpr auto read_element_impl_binary(ElementType& out, std::endian endianness, std::span<const property> property_descriptions) -> std::expected<void, error> {
         using element_traits = detail::element_traits<ElementType>;
         using property = element_traits::template nth_type<I>;
         using property_traits = detail::property_traits<property>;
@@ -290,9 +290,9 @@ private:
         return {};
     }
 
-    static constexpr auto parse_magic_line(std::span<const detail::token> tokens) -> stf::expected<void, error> {
+    static constexpr auto parse_magic_line(std::span<const detail::token> tokens) -> std::expected<void, error> {
         if (tokens.size() != 1) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_or_excess_tokens, 0)};
+            return std::unexpected{error::new_line_error(error_class::insufficient_or_excess_tokens, 0)};
         }
 
         if (tokens[0].m_content != "ply") {

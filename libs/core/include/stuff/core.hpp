@@ -3,6 +3,7 @@
 #include <stuff/core/bunch_of_types.hpp>
 #include <stuff/core/integers.hpp>
 #include <stuff/core/string_literal.hpp>
+#include <stuff/core/try.hpp>
 #include <stuff/core/tuple.hpp>
 #include <stuff/core/type_exists.hpp>
 #include <stuff/core/visitor.hpp>

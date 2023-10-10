@@ -28,7 +28,7 @@ struct program_header {
 
     u64 alignment;
 
-    static constexpr auto from_consumer(detail::data_consumer& consumer) -> stf::expected<program_header, std::string_view> {
+    static constexpr auto from_consumer(detail::data_consumer& consumer) -> std::expected<program_header, std::string_view> {
         auto ret = program_header{
           .type = consumer.consume<u32>(),
         };
@@ -50,7 +50,7 @@ struct program_header {
         ret.alignment = consumer.consume_address();
 
         if (const auto err = ret.get_error(); err) {
-            return stf::unexpected{*err};
+            return std::unexpected{*err};
         }
 
         return ret;

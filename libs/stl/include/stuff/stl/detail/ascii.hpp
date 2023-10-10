@@ -3,14 +3,13 @@
 #include <stuff/stl/detail/header.hpp>
 #include <stuff/stl/detail/triangle.hpp>
 
-#include <stuff/expected.hpp>
-
 #include <charconv>
+#include <expected>
 
 namespace stf::stl::detail {
 
 template<typename IIt>
-constexpr auto read_header_ascii(IIt it, std::sentinel_for<IIt> auto end) -> stf::expected<std::pair<header, IIt>, std::string_view> {
+constexpr auto read_header_ascii(IIt it, std::sentinel_for<IIt> auto end) -> std::expected<std::pair<header, IIt>, std::string_view> {
     auto solid_name = std::string{};
 
     solid_name.push_back(*it++);
@@ -27,7 +26,7 @@ constexpr auto read_header_ascii(IIt it, std::sentinel_for<IIt> auto end) -> stf
     }
 
     if (solid_name.empty() || (it == end && solid_name.back() != '\n')) {
-        return stf::unexpected{"EOF while reading solid name"};
+        return std::unexpected{"EOF while reading solid name"};
     }
 
     solid_name.pop_back();
@@ -35,12 +34,12 @@ constexpr auto read_header_ascii(IIt it, std::sentinel_for<IIt> auto end) -> stf
 }
 
 template<typename IIt, std::invocable<triangle<float>&&> Fn>
-static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentinel_for<IIt> auto end, Fn&& callback) -> stf::expected<IIt, std::string_view> {
+static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentinel_for<IIt> auto end, Fn&& callback) -> std::expected<IIt, std::string_view> {
     auto is_ws = [](char c) -> bool { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; };
 
     auto is_oob = [](char c) -> bool { return c >= '\x7F' || c <= ' '; };
 
-    auto read_word = [&is_ws, &is_oob](IIt& it, std::sentinel_for<IIt> auto end) -> stf::expected<std::string, std::string_view> {
+    auto read_word = [&is_ws, &is_oob](IIt& it, std::sentinel_for<IIt> auto end) -> std::expected<std::string, std::string_view> {
         auto ret = std::string{};
 
         while (it != end) {
@@ -54,7 +53,7 @@ static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentin
             }
 
             if (is_oob(c)) {
-                return stf::unexpected{"bad character in an ASCII STL file"};
+                return std::unexpected{"bad character in an ASCII STL file"};
             }
 
             ret.push_back(c);
@@ -63,18 +62,18 @@ static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentin
         return ret;
     };
 
-    auto read_float = [&read_word](IIt& it, std::sentinel_for<IIt> auto end) -> stf::expected<float, std::string_view> {
+    auto read_float = [&read_word](IIt& it, std::sentinel_for<IIt> auto end) -> std::expected<float, std::string_view> {
         const auto word = TRYX(read_word(it, end));
 
         auto ret = 0.f;
         const auto res = std::from_chars(word.data(), word.data() + word.size(), ret);
         if (res.ec != std::errc{}) {
-            return stf::unexpected{"bad ASCII STL file (bad float)"};
+            return std::unexpected{"bad ASCII STL file (bad float)"};
         }
         return ret;
     };
 
-    auto read_vector = [&read_float](IIt& it, std::sentinel_for<IIt> auto end) -> stf::expected<std::array<float, 3>, std::string_view> {
+    auto read_vector = [&read_float](IIt& it, std::sentinel_for<IIt> auto end) -> std::expected<std::array<float, 3>, std::string_view> {
         return std::array<float, 3>{
           TRYX(read_float(it, end)),  //
           TRYX(read_float(it, end)),  //
@@ -82,9 +81,9 @@ static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentin
         };
     };
 
-    auto expect_word = [&read_word](IIt& it, std::sentinel_for<IIt> auto end, std::string_view str) -> stf::expected<void, std::string_view> {
+    auto expect_word = [&read_word](IIt& it, std::sentinel_for<IIt> auto end, std::string_view str) -> std::expected<void, std::string_view> {
         if (TRYX(read_word(it, end)) != str) {
-            return stf::unexpected{"bad ASCII STL file (unexpected keyword)"};
+            return std::unexpected{"bad ASCII STL file (unexpected keyword)"};
         }
 
         return {};
@@ -103,14 +102,14 @@ static auto read_triangles_ascii(header_ascii const& header, IIt it, std::sentin
             const auto end_solid_name = TRYX(read_word(it, end));
 
             if (end_solid_name != header.m_solid_name) {
-                return stf::unexpected{"bad ASCII STL file (bad endsolid name)"};
+                return std::unexpected{"bad ASCII STL file (bad endsolid name)"};
             }
 
             return {};
         }
 
         if (first_word != "facet") {
-            return stf::unexpected{"bad ASCII STL file (unexpected keyword)"};
+            return std::unexpected{"bad ASCII STL file (unexpected keyword)"};
         }
 
         TRYX(expect_word(it, end, "normal"));

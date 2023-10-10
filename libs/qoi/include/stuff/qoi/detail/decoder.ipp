@@ -36,7 +36,7 @@ constexpr auto op_size(qoi_op op) -> usize {
 
 struct decoder {
 private:
-    using err_type = unexpected<std::string_view>;
+    using err_type = std::unexpected<std::string_view>;
     static constexpr err_type m_ran_out_err{"ran out of QOI data prematurely"};
     static constexpr err_type m_overrun_err{"QOI data contains more data than the header implies"};
 
@@ -47,7 +47,7 @@ public:
         std::fill(m_hash_table.begin(), m_hash_table.end(), color{0, 0, 0, 0});
     }
 
-    constexpr auto decode() -> expected<usize, std::string_view> {
+    constexpr auto decode() -> std::expected<usize, std::string_view> {
         usize orig_size = m_in_data.size();
 
         for (;;) {
@@ -173,7 +173,7 @@ private:
         process_op_unchecked(leading, op);
     }
 
-    constexpr auto iterate_checked() -> expected<void, std::string_view> {
+    constexpr auto iterate_checked() -> std::expected<void, std::string_view> {
         if (m_in_data.empty()) {
             return m_ran_out_err;
         }
@@ -205,7 +205,7 @@ private:
 
 }  // namespace decoder
 
-constexpr auto decode(std::span<color> out_pixels, std::span<const u8> in_data) -> expected<void, std::string_view> {
+constexpr auto decode(std::span<color> out_pixels, std::span<const u8> in_data) -> std::expected<void, std::string_view> {
     TRYX(decoder::decoder{out_pixels, in_data}.decode());
     return {};
 }

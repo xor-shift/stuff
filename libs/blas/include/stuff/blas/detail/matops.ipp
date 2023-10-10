@@ -176,6 +176,20 @@ constexpr auto operator-(T const& v) -> concepts::nd_matrix_of_t<typename T::val
     return ret;
 }
 
+template<concepts::matrix T>
+constexpr auto transpose(T const& v) -> concepts::nd_matrix_of_t<typename T::value_type, T::cols, T::rows> auto {
+    using ret_type = typename T::template rebind<typename T::value_type>;
+    concepts::nd_matrix_of_t<typename T::value_type, T::rows, T::cols> auto ret = ret_type{};
+
+    for (auto row = 0uz; row < T::cols; row++) {
+        for (auto col = 0uz; col < T::rows; col++) {
+            ret[row][col] = v[col][row];
+        }
+    }
+
+    return ret;
+}
+
 template<concepts::matrix T, concepts::matrix U>
     requires(T::rows == U::rows && T::cols == U::cols)
 constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_matrix<T::rows, T::cols> auto{

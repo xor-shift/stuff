@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stuff/core.hpp>
-#include <stuff/expected.hpp>
 
+#include <expected>
 #include <optional>
 #include <string_view>
 
@@ -52,10 +52,10 @@ concept serializer =  //
       // should ideally call ADL-serialize at some point
       ser.serialize_optional(std::optional<int>{});
 
-      { ser.serialize_seq(std::optional<usize>{}) } -> std::convertible_to<stf::expected<typename T::serialize_seq_type, typename T::error_type>>;
-      { ser.template serialize_tuple<0uz>() } -> std::convertible_to<stf::expected<typename T::serialize_tuple_type, typename T::error_type>>;
-      { ser.template serialize_map<std::string_view, int>(usize{}) } -> std::convertible_to<stf::expected<typename T::serialize_map_type, typename T::error_type>>;
-      //{ ser.template serialize_struct<..., intro::introspector_t<...>>() } -> std::convertible_to<stf::expected<typename T::serialize_struct_type, typename T::error_type>>;
+      { ser.serialize_seq(std::optional<usize>{}) } -> std::convertible_to<std::expected<typename T::serialize_seq_type, typename T::error_type>>;
+      { ser.template serialize_tuple<0uz>() } -> std::convertible_to<std::expected<typename T::serialize_tuple_type, typename T::error_type>>;
+      { ser.template serialize_map<std::string_view, int>(usize{}) } -> std::convertible_to<std::expected<typename T::serialize_map_type, typename T::error_type>>;
+      //{ ser.template serialize_struct<..., intro::introspector_t<...>>() } -> std::convertible_to<std::expected<typename T::serialize_struct_type, typename T::error_type>>;
   };
 
 template<typename T>
@@ -64,8 +64,8 @@ concept seq_serializer =  //
       typename T::value_type;
       typename T::error_type;
 
-      { ser.serialize_element(int()) } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
-      { ser.end() } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
+      { ser.serialize_element(int()) } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
+      { ser.end() } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
   };
 
 template<typename T>
@@ -74,8 +74,8 @@ concept tuple_serializer =  //
       typename T::value_type;
       typename T::error_type;
 
-      { ser.serialize_element(int()) } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
-      { ser.end() } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
+      { ser.serialize_element(int()) } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
+      { ser.end() } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
   };
 
 template<typename T>
@@ -84,8 +84,8 @@ concept map_serializer =  //
       typename T::value_type;
       typename T::error_type;
 
-      { ser.serialize_entry(std::string_view{}, int()) } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
-      { ser.end() } -> std::convertible_to<stf::expected<typename T::value_type, typename T::error_type>>;
+      { ser.serialize_entry(std::string_view{}, int()) } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
+      { ser.end() } -> std::convertible_to<std::expected<typename T::value_type, typename T::error_type>>;
   };
 
 }  // namespace stf::serde::concepts
@@ -94,6 +94,6 @@ namespace stf::serde {
 
 template<typename Serializer, typename T>
 constexpr auto serialize(Serializer&& serializer, T&& v)
-  -> stf::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
+  -> std::expected<typename std::remove_cvref_t<Serializer>::value_type, typename std::remove_cvref_t<Serializer>::error_type>;
 
 }

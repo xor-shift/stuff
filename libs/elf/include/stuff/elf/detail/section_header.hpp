@@ -2,7 +2,7 @@
 
 #include <stuff/elf/detail/consumer.hpp>
 
-#include <stuff/expected.hpp>
+#include <expected>
 
 namespace stf::elf {
 
@@ -55,7 +55,7 @@ struct section_header {
     u64 alignment;
     u64 entry_size;
 
-    static constexpr auto from_consumer(detail::data_consumer& consumer) -> stf::expected<section_header, std::string_view> {
+    static constexpr auto from_consumer(detail::data_consumer& consumer) -> std::expected<section_header, std::string_view> {
         auto ret = section_header{
           .name_offset = consumer.consume<u32>(),
           .type = consumer.consume<u32>(),
@@ -70,7 +70,7 @@ struct section_header {
         };
 
         if (const auto err = ret.get_error(); err) {
-            return stf::unexpected{*err};
+            return std::unexpected{*err};
         }
 
         return ret;

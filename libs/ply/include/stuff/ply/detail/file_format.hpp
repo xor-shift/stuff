@@ -2,9 +2,8 @@
 
 #include <stuff/ply/detail/token.hpp>
 
-#include <stuff/expected.hpp>
-
 #include <charconv>
+#include <expected>
 
 namespace stf::ply {
 
@@ -19,9 +18,9 @@ struct file_format {
     usize m_version_major;
     usize m_version_minor;
 
-    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> stf::expected<file_format, error> {
+    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> std::expected<file_format, error> {
         if (tokens.size() != 3) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
         }
 
         if (tokens[0].m_content != "format") {

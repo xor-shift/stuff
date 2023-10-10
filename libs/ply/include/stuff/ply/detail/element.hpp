@@ -11,9 +11,9 @@ struct element {
     std::vector<property> m_properties;
     usize m_size;
 
-    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> stf::expected<element, error> {
+    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> std::expected<element, error> {
         if (tokens.size() != 3) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
         }
 
         if (tokens[0].m_content != "element") {

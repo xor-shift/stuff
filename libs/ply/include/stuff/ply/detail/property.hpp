@@ -4,9 +4,9 @@
 
 #include <stuff/bit.hpp>
 #include <stuff/core.hpp>
-#include <stuff/expected.hpp>
 
 #include <charconv>
+#include <expected>
 #include <span>
 
 namespace stf::ply {
@@ -85,7 +85,7 @@ constexpr auto field_type_sign(basic_field_type type) -> bool {
     std::unreachable();
 }
 
-constexpr auto parse_basic_field_type(token const& token) -> stf::expected<basic_field_type, error> {
+constexpr auto parse_basic_field_type(token const& token) -> std::expected<basic_field_type, error> {
     using namespace std::string_view_literals;
 
     if (token.m_content.starts_with("uint"sv)) {
@@ -178,9 +178,9 @@ struct property {
     field_type m_field;
     std::string m_name;
 
-    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> stf::expected<property, error> {
+    static constexpr auto from_tokens(std::span<const detail::token> tokens, usize line) -> std::expected<property, error> {
         if (tokens.size() != 3 && tokens.size() != 5) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line)};
         }
 
         if (tokens[0].m_content != "property") {
@@ -216,10 +216,10 @@ namespace detail {
 
 template<typename T, typename It, std::sentinel_for<It> Sentinel>
     requires std::integral<T>
-static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian, usize file_offset, basic_field_type field_type) -> stf::expected<T, error> {
-    auto error_if_eof = [&it, sentinel, file_offset] -> stf::expected<void, error> {
+static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian, usize file_offset, basic_field_type field_type) -> std::expected<T, error> {
+    auto error_if_eof = [&it, sentinel, file_offset] -> std::expected<void, error> {
         if (it == sentinel) {
-            return stf::unexpected{error::new_binary_error(error_class::premature_eof, file_offset, "not enough bytes for the declared type")};
+            return std::unexpected{error::new_binary_error(error_class::premature_eof, file_offset, "not enough bytes for the declared type")};
         }
 
         return {};
@@ -230,7 +230,7 @@ static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian,
     auto buf = std::array<u8, sizeof(u64)>{};
 
     if (file_width > buf.size()) {
-        return stf::unexpected{error::new_binary_error(error_class::internal, file_offset, "file size is larger than the largest expected size (which is 8)")};
+        return std::unexpected{error::new_binary_error(error_class::internal, file_offset, "file size is larger than the largest expected size (which is 8)")};
     }
 
     for (usize i = 0; i < file_width; i++) {
@@ -267,7 +267,7 @@ static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian,
 
 template<typename T, typename It, std::sentinel_for<It> Sentinel>
     requires std::floating_point<T>
-static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian, usize file_offset, basic_field_type field_type) -> stf::expected<T, error> {
+static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian, usize file_offset, basic_field_type field_type) -> std::expected<T, error> {
     const auto file_width = field_byte_width(field_type);
     auto ret = T{};
 
@@ -278,7 +278,7 @@ static constexpr auto read_scalar(It& it, Sentinel sentinel, std::endian endian,
         const auto temp = TRYX(read_scalar<u64>(it, sentinel, endian, file_offset, field_type));
         ret = static_cast<T>(std::bit_cast<double>(temp));
     } else {
-        return stf::unexpected{error::new_binary_error(error_class::internal, file_offset, "unsupported file width for floating point data, expected 4 or 8")};
+        return std::unexpected{error::new_binary_error(error_class::internal, file_offset, "unsupported file width for floating point data, expected 4 or 8")};
     }
 
     return ret;
@@ -290,9 +290,9 @@ struct property_traits;
 template<typename T>
     requires(std::integral<T> || std::floating_point<T>)
 struct property_traits<T> {
-    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> stf::expected<std::pair<T, usize>, error> {
+    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> std::expected<std::pair<T, usize>, error> {
         if (tokens.empty()) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not ebnough tokens to parse a scalar")};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not ebnough tokens to parse a scalar")};
         }
 
         const auto res = TRYX(tokens[0].as_scalar<T>());
@@ -301,9 +301,9 @@ struct property_traits<T> {
     }
 
     template<typename It, std::sentinel_for<It> Sentinel>
-    static constexpr auto parse_from_binary(It& it, Sentinel sentinel, std::endian endian, field_type field, usize offset) -> stf::expected<std::pair<T, usize>, error> {
+    static constexpr auto parse_from_binary(It& it, Sentinel sentinel, std::endian endian, field_type field, usize offset) -> std::expected<std::pair<T, usize>, error> {
         if (!std::holds_alternative<basic_field_type>(field)) {
-            return stf::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
+            return std::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
         }
 
         const auto basic_field = std::get<basic_field_type>(field);
@@ -315,9 +315,9 @@ struct property_traits<T> {
 
 template<typename T>
 struct property_traits<std::vector<T>> {
-    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> stf::expected<std::pair<std::vector<T>, usize>, error> {
+    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> std::expected<std::pair<std::vector<T>, usize>, error> {
         if (tokens.empty()) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not enough tokens to parse a list")};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not enough tokens to parse a list")};
         }
 
         const auto list_size = TRYX(tokens[0].as_scalar<usize>());
@@ -337,9 +337,9 @@ struct property_traits<std::vector<T>> {
 
     template<typename It, std::sentinel_for<It> Sentinel>
     static constexpr auto parse_from_binary(It& it, Sentinel sentinel, std::endian endian, field_type field, usize offset)
-      -> stf::expected<std::pair<std::vector<T>, usize>, error> {
+      -> std::expected<std::pair<std::vector<T>, usize>, error> {
         if (!std::holds_alternative<list_field_type>(field)) {
-            return stf::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
+            return std::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
         }
         const auto [index_type, value_type] = std::get<list_field_type>(field);
 
@@ -360,9 +360,9 @@ struct property_traits<std::vector<T>> {
 
 template<typename T, usize N>
 struct property_traits<std::array<T, N>> {
-    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> stf::expected<std::pair<std::array<T, N>, usize>, error> {
+    static constexpr auto parse_from_ascii(std::span<const token> tokens, usize line) -> std::expected<std::pair<std::array<T, N>, usize>, error> {
         if (tokens.empty()) {
-            return stf::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not enough tokens to parse a fixed-size list")};
+            return std::unexpected{error::new_line_error(error_class::insufficient_tokens, line, "not enough tokens to parse a fixed-size list")};
         }
 
         const auto list_size = TRYX(tokens[0].template as_scalar<usize>());
@@ -386,16 +386,16 @@ struct property_traits<std::array<T, N>> {
 
     template<typename It, std::sentinel_for<It> Sentinel>
     static constexpr auto parse_from_binary(It& it, Sentinel sentinel, std::endian endian, field_type field, usize offset)
-      -> stf::expected<std::pair<std::array<T, N>, usize>, error> {
+      -> std::expected<std::pair<std::array<T, N>, usize>, error> {
         if (!std::holds_alternative<list_field_type>(field)) {
-            return stf::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
+            return std::unexpected{error::new_binary_error(error_class::internal, offset, "expected to parse a scalar type")};
         }
         const auto [index_type, value_type] = std::get<list_field_type>(field);
 
         const auto list_size = TRYX(read_scalar<usize>(it, sentinel, endian, offset, index_type));
 
         if (list_size != N) {
-            return stf::unexpected{error::new_binary_error(error_class::bad_data_in_token, offset, "list declares an unexpected number of items")};
+            return std::unexpected{error::new_binary_error(error_class::bad_data_in_token, offset, "list declares an unexpected number of items")};
         }
 
         auto ret = std::array<T, N>();

@@ -4,20 +4,20 @@
 #include <stuff/stl/detail/triangle.hpp>
 #include <stuff/stl/detail/util.hpp>
 
-#include <stuff/expected.hpp>
+#include <expected>
 
 namespace stf::stl::detail {
 
 template<typename IIt>
-constexpr auto read_header_binary(IIt it, std::sentinel_for<IIt> auto end, std::array<u8, 5> const& leading_bytes) -> stf::expected<std::pair<header, IIt>, std::string_view> {
+constexpr auto read_header_binary(IIt it, std::sentinel_for<IIt> auto end, std::array<u8, 5> const& leading_bytes) -> std::expected<std::pair<header, IIt>, std::string_view> {
     auto header_bytes = std::array<u8, 80>{};
     if (!try_read(it, end, std::copy(leading_bytes.begin(), leading_bytes.end(), header_bytes.begin()), header_bytes.end())) {
-        return stf::unexpected{"unexpected EOF while reading binary header"};
+        return std::unexpected{"unexpected EOF while reading binary header"};
     }
 
     auto num_triangles_bytes = std::array<u8, 4>{};
     if (!try_read_range(it, end, num_triangles_bytes)) {
-        return stf::unexpected{"unexpected EOF while reading the number of triangles"};
+        return std::unexpected{"unexpected EOF while reading the number of triangles"};
     }
 
     const auto num_triangles = stf::bit::convert_endian(std::bit_cast<u32>(num_triangles_bytes), std::endian::little, std::endian::native);
@@ -26,11 +26,11 @@ constexpr auto read_header_binary(IIt it, std::sentinel_for<IIt> auto end, std::
 }
 
 template<typename IIt, std::invocable<triangle<float>&&> Fn>
-constexpr auto read_triangles_binary(header_binary const& header, IIt it, std::sentinel_for<IIt> auto end, Fn&& callback) -> stf::expected<IIt, std::string_view> {
+constexpr auto read_triangles_binary(header_binary const& header, IIt it, std::sentinel_for<IIt> auto end, Fn&& callback) -> std::expected<IIt, std::string_view> {
     auto n = 0uz;
     for (; it != end; n++) {
         if (n >= header.m_num_triangles) {
-            return stf::unexpected{"excess data"};
+            return std::unexpected{"excess data"};
         }
 
         auto ret = triangle<float>{};
@@ -49,14 +49,14 @@ constexpr auto read_triangles_binary(header_binary const& header, IIt it, std::s
                   detail::try_read(it, end, ret.m_attributes);
 
         if (!ok) {
-            return stf::unexpected{"eof"};
+            return std::unexpected{"eof"};
         }
 
         std::invoke(std::forward<Fn>(callback), std::move(ret));
     }
 
     if (n != header.m_num_triangles) {
-        return stf::unexpected{"the file contains less triangles than the header would suggest"};
+        return std::unexpected{"the file contains less triangles than the header would suggest"};
     }
 
     return it;

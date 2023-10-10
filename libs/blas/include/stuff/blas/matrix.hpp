@@ -175,6 +175,9 @@ constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::nd_matrix<T::c
 template<concepts::matrix T>
 constexpr auto operator-(T const& v) -> concepts::nd_matrix_of_t<typename T::value_type, T::rows, T::cols> auto;
 
+template<concepts::matrix T>
+constexpr auto transpose(T const& v) -> concepts::nd_matrix_of_t<typename T::value_type, T::cols, T::rows> auto;
+
 /// @return
 /// The elementwise subtraction of <code>lhs</code> and <code>rhs</code> or a
 /// matrix-expression equivalent to it.

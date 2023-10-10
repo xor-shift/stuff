@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stuff/core.hpp>
-#include <stuff/expected.hpp>
 
+#include <expected>
 #include <span>
 
 namespace stf::elf {
@@ -38,9 +38,9 @@ struct identification {
     std::array<u8, 7> ident_padding;  //!< e_ident[EI_PAD]
 
     template<usize Extent = std::dynamic_extent>
-    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> stf::expected<identification, std::string_view> {
+    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> std::expected<identification, std::string_view> {
         if (bytes.size() < 16) {
-            return stf::unexpected{"not enough bytes for e_ident"};
+            return std::unexpected{"not enough bytes for e_ident"};
         }
 
         auto ret = identification{
@@ -55,7 +55,7 @@ struct identification {
         std::copy_n(bytes.begin() + 0x09, 7, ret.ident_padding.begin());
 
         if (auto err = ret.get_error(); err) {
-            return stf::unexpected{*err};
+            return std::unexpected{*err};
         }
 
         return ret;

@@ -10,8 +10,8 @@ namespace detail {
 
 template<typename T>
 struct segment_iterator {
-    using value_type = stf::expected<T, std::string_view>;
-    using reference = stf::expected<T, std::string_view>&;
+    using value_type = std::expected<T, std::string_view>;
+    using reference = std::expected<T, std::string_view>&;
 
     data_consumer m_consumer;
 
@@ -52,37 +52,37 @@ struct elf {
     std::span<const u8> m_bytes{};
 
     template<usize Extent = std::dynamic_extent>
-    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> stf::expected<elf, std::string_view> {
+    static constexpr auto from_bytes(std::span<const u8, Extent> bytes) -> std::expected<elf, std::string_view> {
         auto ret = elf{
           .m_header = TRYX(header::from_bytes(bytes)),
           .m_bytes = bytes,
         };
 
         if (auto err = ret.get_error(); err) {
-            return stf::unexpected{*err};
+            return std::unexpected{*err};
         }
 
         return ret;
     }
 
-    constexpr auto get_program_header(usize i) const -> stf::expected<program_header, std::string_view> {
+    constexpr auto get_program_header(usize i) const -> std::expected<program_header, std::string_view> {
         auto consumer = get_consumer(m_header.program_header_table_offset + i * m_header.program_header_table_entry_size);
         const auto header = TRYX(program_header::from_consumer(consumer));
 
         if (!range_is_contained(header.file_offset, header.file_size)) {
-            return stf::unexpected { "section contents are out of range" };
+            return std::unexpected { "section contents are out of range" };
         }
 
         return header;
     }
 
 
-    constexpr auto get_section_header(usize i) const -> stf::expected<section_header, std::string_view> {
+    constexpr auto get_section_header(usize i) const -> std::expected<section_header, std::string_view> {
         auto consumer = get_consumer(m_header.segment_header_table_offset + i * m_header.segment_header_table_entry_size);
         const auto header = TRYX(section_header::from_consumer(consumer));
 
         if (!range_is_contained(header.file_offset, header.file_size) && header.type != static_cast<u32>(section_type::no_bits)) {
-            return stf::unexpected { "section contents are out of range" };
+            return std::unexpected { "section contents are out of range" };
         }
 
         return header;

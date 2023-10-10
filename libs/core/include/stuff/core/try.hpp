@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stuff/expected/expected.hpp>
-#include <stuff/expected/unexpected.hpp>
-
 #include <expected>
 #include <optional>
 
@@ -20,26 +17,10 @@ struct try_helper<std::optional<T>> {
 
 template<typename T, typename E>
     requires(!std::is_void_v<T>)
-struct try_helper<expected<T, E>> {
-    static constexpr auto has_value(expected<T, E> const& v) -> bool { return bool(v); }
-    static constexpr auto value(expected<T, E>&& v) -> T&& { return std::move(v.value()); }
-    static constexpr auto error(expected<T, E>&& v) -> unexpected<E> { return unexpected{std::move(v.error())}; }
-};
-
-template<typename T, typename E>
-    requires(!std::is_void_v<T>)
 struct try_helper<std::expected<T, E>> {
     static constexpr auto has_value(std::expected<T, E> const& v) -> bool { return bool(v); }
     static constexpr auto value(std::expected<T, E>&& v) -> T&& { return std::move(v.value()); }
     static constexpr auto error(std::expected<T, E>&& v) -> std::unexpected<E> { return std::unexpected{std::move(v.error())}; }
-};
-
-template<typename T, typename E>
-    requires std::is_void_v<T>
-struct try_helper<expected<T, E>> {
-    static constexpr auto has_value(expected<T, E> const& v) -> bool { return bool(v); }
-    static constexpr void value(expected<T, E>&& v) {}
-    static constexpr auto error(expected<T, E>&& v) -> unexpected<E> { return unexpected{std::move(v.error())}; }
 };
 
 template<typename T, typename E>

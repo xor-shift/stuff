@@ -25,7 +25,7 @@ struct lossless_encoder {
 
         u8 c_hash = c.hash();
 
-        stf::scope::scope_exit scope_exit{[this, c, c_hash] {
+        stf::scope_exit scope_exit{[this, c, c_hash] {
             m_prev_color = c;
             m_hash_table[c_hash % 64] = c;
         }};
@@ -209,7 +209,7 @@ private:
 }  // namespace encoder
 
 template<typename It>
-constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels) -> expected<It, std::string_view> {
+constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels) -> std::expected<It, std::string_view> {
     encoder::lossless_encoder encoder{out_data};
     for (color c : in_pixels) {
         encoder.pixel(c);
@@ -219,7 +219,7 @@ constexpr auto encode_lossless(It out_data, std::span<const color> in_pixels) ->
 
 template<typename It>
 constexpr auto encode_lossy(It out_data, std::span<const color> in_pixels, double tolerance)
-  -> expected<It, std::string_view> {
+  -> std::expected<It, std::string_view> {
     encoder::tolerant_encoder encoder{out_data, tolerance};
     for (color c : in_pixels) {
         encoder.pixel(c);

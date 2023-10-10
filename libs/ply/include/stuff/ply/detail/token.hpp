@@ -2,9 +2,8 @@
 
 #include <stuff/ply/detail/error.hpp>
 
-#include <stuff/expected.hpp>
-
 #include <charconv>
+#include <expected>
 #include <ranges>
 
 namespace stf::ply::detail {
@@ -14,8 +13,8 @@ struct token {
     usize m_row;
     usize m_col;
 
-    constexpr auto generate_error(error_class error_class, std::string_view additional = "", usize offset = 0, usize length = 0) const -> stf::unexpected<error> {
-        return stf::unexpected{error{
+    constexpr auto generate_error(error_class error_class, std::string_view additional = "", usize offset = 0, usize length = 0) const -> std::unexpected<error> {
+        return std::unexpected{error{
           .m_class = error_class,
           .m_location = get_location(),
           .m_additional = additional,
@@ -36,7 +35,7 @@ struct token {
     }
 
     template<typename T>
-    constexpr auto as_scalar() const -> stf::expected<T, error> {
+    constexpr auto as_scalar() const -> std::expected<T, error> {
         auto ret = T{};
         const auto res = std::from_chars(m_content.data(), m_content.data() + m_content.size(), ret);
 
