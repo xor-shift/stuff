@@ -8,6 +8,23 @@
 
 namespace stf::intro::detail {
 
+template<typename Intro, usize I>
+struct aggregate_member_offset_helper {
+    // we don't really have access to the member pointers, sad!
+    // also: i VIL use template meta-functions, i VIL be happy, and there's nothing you can do.
+    // <sub>(they should be faster than constexpr/eval functions anyway)</sub>
+    //
+    // what do you mean HTML tags don't work in comments
+
+    static constexpr auto offset_upto_here = aggregate_member_offset_helper<Intro, I - 1>::value;
+    static constexpr auto next_available_char = offset_upto_here + sizeof(typename Intro::template nth_type<I - 1>);
+    static constexpr auto off_by = next_available_char % alignof(typename Intro::template nth_type<I>);
+    static constexpr auto value = next_available_char + off_by;
+};
+
+template<typename Intro>
+struct aggregate_member_offset_helper<Intro, 0> : std::integral_constant<usize, 0> {};
+
 template<typename T>
 struct aggregate_introspector {
     using intro_type = std::remove_cvref_t<T>;
@@ -18,6 +35,10 @@ struct aggregate_introspector {
     template<usize I>
         requires(I < size())
     using nth_type = member_type_t<T, I>;
+
+    template<usize I>
+        requires(I < size())
+    static constexpr auto nth_offset = aggregate_member_offset_helper<aggregate_introspector<T>, I>::value;
 
     template<usize I, typename Aggregate>
         requires(std::is_same_v<std::remove_cvref_t<Aggregate>, intro_type>)
