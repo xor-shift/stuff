@@ -41,8 +41,6 @@ static_assert(([] constexpr->bool {
       .e = std::move(v),
     };
 
-    decltype(std::declval<int>()) asddfgb{std::move(v)};
-
     auto&& [a, b, c, d, e] = asd;
 
     static_assert(std::is_same_v<decltype(a), int>);

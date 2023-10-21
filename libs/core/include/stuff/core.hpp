@@ -19,6 +19,11 @@ namespace stf {
 /// <code>chan struct{}</code> from Go))
 struct empty {};
 
+template<string_literal Lit>
+constexpr void unreachable_with_message() {
+    std::unreachable();
+}
+
 constexpr void assume(bool pred, const char* message = nullptr) noexcept {
     if (!pred) {
 #ifdef NDEBUG
@@ -28,6 +33,8 @@ constexpr void assume(bool pred, const char* message = nullptr) noexcept {
 
         auto&& real_message = message != nullptr ? "assumption failed: "s + message : "assumption failed"s;
 
+        std::abort();
+/*
 #    pragma GCC diagnostic push
 #    ifdef __clang__
 #        pragma GCC diagnostic ignored "-Wexceptions"
@@ -35,17 +42,12 @@ constexpr void assume(bool pred, const char* message = nullptr) noexcept {
 #        pragma GCC diagnostic ignored "-Wterminate"
 #    endif
         throw std::runtime_error(real_message);
-#    pragma GCC diagnostic pop
+#    pragma GCC diagnostic pop*/
 #endif
     }
 }
 
-template<string_literal Lit>
-constexpr void unreachable_with_message() {
-    std::unreachable();
-}
-
-};  // namespace stf
+}  // namespace stf
 
 #include <string_view>
 
