@@ -1,4 +1,4 @@
-#include <stuff/core.hpp>
+#include <stuff/core/bunch_of_types.hpp>
 
 #include <gtest/gtest.h>
 

@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.25)
 project(stuff_core_tests LANGUAGES CXX)
 
 add_executable(${PROJECT_NAME}
-        core.cpp
+        bunch_of_types.cpp
+        stow.cpp
         )
 
 sanitize(${PROJECT_NAME})

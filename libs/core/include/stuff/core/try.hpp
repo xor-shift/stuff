@@ -1,5 +1,7 @@
 #pragma once
 
+#define __cpp_concepts 202002L
+
 #include <expected>
 #include <optional>
 
@@ -19,8 +21,8 @@ template<typename T, typename E>
     requires(!std::is_void_v<T>)
 struct try_helper<std::expected<T, E>> {
     static constexpr auto has_value(std::expected<T, E> const& v) -> bool { return bool(v); }
-    static constexpr auto value(std::expected<T, E>&& v) -> T&& { return std::move(v.value()); }
-    static constexpr auto error(std::expected<T, E>&& v) -> std::unexpected<E> { return std::unexpected{std::move(v.error())}; }
+    static constexpr auto value(std::expected<T, E>&& v) -> T&& { return std::move(v).value(); }
+    static constexpr auto error(std::expected<T, E>&& v) -> std::unexpected<E> { return std::unexpected{std::move(v).error()}; }
 };
 
 template<typename T, typename E>
@@ -28,7 +30,7 @@ template<typename T, typename E>
 struct try_helper<std::expected<T, E>> {
     static constexpr auto has_value(std::expected<T, E> const& v) -> bool { return bool(v); }
     static constexpr void value(std::expected<T, E>&& v) {}
-    static constexpr auto error(std::expected<T, E>&& v) -> std::unexpected<E> { return std::unexpected{std::move(v.error())}; }
+    static constexpr auto error(std::expected<T, E>&& v) -> std::unexpected<E> { return std::unexpected{std::move(v).error()}; }
 };
 
 template<typename T>
@@ -42,7 +44,7 @@ struct try_helper<const volatile T> : try_helper<T> {};
 
 }  // namespace stf::detail
 
-#define TRYX_BASE(_return_keyword, _res_name, _helper_name, ...)             \
+#define TRY_BASE(_return_keyword, _res_name, _helper_name, ...)              \
     ({                                                                       \
         auto _res_name = (__VA_ARGS__);                                      \
         using _helper_name = ::stf::detail::try_helper<decltype(_res_name)>; \
@@ -52,11 +54,14 @@ struct try_helper<const volatile T> : try_helper<T> {};
         _helper_name::value(std::move(_res_name));                           \
     })
 
-#define TRYX_CAT_1(_a, _b) _a##_##_b
-#define TRYX_CAT_0(_a, _b) TRYX_CAT_1(_a, _b)
+#define TRY_CAT_1(_a, _b) _a##_##_b
+#define TRY_CAT_0(_a, _b) TRY_CAT_1(_a, _b)
 
-#define TRYX(...) TRYX_BASE(return, TRYX_CAT_0(_res, __COUNTER__), TRYX_CAT_0(_helper_type, __COUNTER__), __VA_ARGS__)
-#define TRYX_CORO(...) TRYX_BASE(co_return, TRYX_CAT_0(_res, __COUNTER__), TRYX_CAT_0(_helper_type, __COUNTER__), __VA_ARGS__)
+#define TRY(...) TRY_BASE(return, TRY_CAT_0(_res, __COUNTER__), TRY_CAT_0(_helper_type, __COUNTER__), __VA_ARGS__)
+#define TRY_CORO(...) TRY_BASE(co_return, TRY_CAT_0(_res, __COUNTER__), TRY_CAT_0(_helper_type, __COUNTER__), __VA_ARGS__)
+
+#define TRYX TRY
+#define TRYX_CORO TRY_CORO
 
 #define UNWRAP(...)                                                     \
     ({                                                                  \
