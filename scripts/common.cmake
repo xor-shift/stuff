@@ -1,6 +1,6 @@
-function(sanitize target)
-    target_compile_options(${target} PRIVATE -fsanitize=address -fsanitize=undefined)
-    target_link_options(${target} PRIVATE -fsanitize=address -fsanitize=undefined)
+function(sanitize_impl target type)
+    target_compile_options(${target} ${type} -fsanitize=address -fsanitize=undefined)
+    target_link_options(${target} ${type} -fsanitize=address -fsanitize=undefined)
 
     if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
         #target_compile_options(${target} PRIVATE -static-libsan)
@@ -9,6 +9,10 @@ function(sanitize target)
         #target_compile_options(${target} PRIVATE -static-libasan)
         #target_link_options(${target} PRIVATE -static-libasan)
     endif ()
+endfunction()
+
+function(sanitize target)
+    sanitize_impl(${target} PRIVATE)
 endfunction()
 
 function(optimize_or_sanitize target)
