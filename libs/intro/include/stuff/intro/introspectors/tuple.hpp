@@ -26,6 +26,7 @@ static constexpr void tuple_iterate(Tuple&& v, Fn&& fn) {
     constexpr bool runtime_iterno_functor =
       !constexpr_iterno_functor && requires { std::invoke(std::forward<Fn>(fn), I, std::declval<arg_type>()); };
 
+    // me from 23/05/24 here, what did i mean by the comment below?
     // could be || too
     static_assert(constexpr_iterno_functor != runtime_iterno_functor, "Bad functor for iterate()");
 

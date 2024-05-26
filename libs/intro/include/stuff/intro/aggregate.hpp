@@ -22,6 +22,12 @@ struct aggregate_member_offset_helper {
     static constexpr auto value = next_available_char + off_by;
 };
 
+template<typename Intro, usize I>
+    requires (I == Intro::size())
+struct aggregate_member_offset_helper<Intro, I> {
+    static constexpr auto value = sizeof(typename Intro::intro_type);
+};
+
 template<typename Intro>
 struct aggregate_member_offset_helper<Intro, 0> : std::integral_constant<usize, 0> {};
 
@@ -37,7 +43,7 @@ struct aggregate_introspector {
     using nth_type = member_type_t<T, I>;
 
     template<usize I>
-        requires(I < size())
+        requires(I <= size())
     static constexpr auto nth_offset = aggregate_member_offset_helper<aggregate_introspector<T>, I>::value;
 
     template<usize I, typename Aggregate>
@@ -49,15 +55,28 @@ struct aggregate_introspector {
     template<typename Fn, typename Aggregate>
         requires(std::is_same_v<std::remove_cvref_t<Aggregate>, intro_type>)
     static constexpr void iterate(Aggregate&& v, Fn&& fn) {
-        return tuple_iterate<aggregate_introspector<T>, Fn, Aggregate, 0>(
-          std::forward<Aggregate>(v), std::forward<Fn>(fn)
-        );
+        return tuple_iterate<aggregate_introspector<T>, Fn, Aggregate, 0>(std::forward<Aggregate>(v), std::forward<Fn>(fn));
+    }
+
+    template<typename Fn>
+    static constexpr void iterate_types(Fn&& fn) {
+        return iterate_types_impl<Fn, 0>(std::forward<Fn>(fn));
+    }
+
+private:
+    template<typename Fn, usize I>
+    static constexpr void iterate_types_impl(Fn&& fn) {
+        std::invoke(std::forward<Fn>(fn), std::integral_constant<usize, I>{}, std::type_identity<nth_type<I>>{});
+
+        if constexpr (I + 1 < size()) {
+            return iterate_types_impl<Fn, I + 1>(std::forward<Fn>(fn));
+        }
     }
 };
 
 namespace ce_tests {
 
-static_assert(([] constexpr->bool {
+static_assert(([] constexpr -> bool {
     struct test_struct {
         int a;
         float b;

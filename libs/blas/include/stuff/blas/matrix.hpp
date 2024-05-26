@@ -2,210 +2,270 @@
 
 #include <stuff/blas/vector.hpp>
 
-#include <cmath>
-#include <span>
+#include <ranges>
 
 namespace stf::blas {
 
-template<typename T, usize Rows, usize Cols>
-struct matrix;
+namespace concepts {
 
-namespace detail {
+template<typename T>
+concept matrix = requires(T const& cv) {
+    typename T::value_type;
+
+    { cv[0uz] } -> concepts::vector;
+    { cv.column(0uz) } -> concepts::vector;
+    { T::rows } -> std::convertible_to<usize>;
+    { T::cols } -> std::convertible_to<usize>;
+
+    typename std::integral_constant<usize, T::rows>;
+    typename std::integral_constant<usize, T::cols>;
+};
+
+}
 
 template<typename T, usize Cols>
-struct matrix_row {
-    using value_type = std::remove_const_t<T>;
+struct matrix_row_adapter {
+    using value_type = T;
+
+    template<typename U, usize N>
+    using rebind = vector<U, N>;
+
     inline static constexpr usize size = Cols;
 
-    template<typename U>
-    using rebind = vector<U, size>;
+    constexpr matrix_row_adapter() noexcept = delete;
 
-    template<typename U, usize N>
-    using rebind_n = vector<U, N>;
+    constexpr matrix_row_adapter(std::span<T, Cols> data)
+        : m_data(data) {}
 
+    constexpr auto operator[](usize i) const noexcept -> T const& { return m_data[i]; }
+    constexpr auto operator[](usize i) noexcept -> T& { return m_data[i]; }
+
+private:
     std::span<T, Cols> m_data;
-
-    constexpr auto operator[](usize i) const -> T const& { return m_data[i]; }
-    constexpr auto operator[](usize i) -> T& { return m_data[i]; }
 };
-
-template<usize I, typename T, usize Cols>
-    requires(I < Cols)
-constexpr auto get(matrix_row<T, Cols> const& v) -> typename matrix_row<T, Cols>::value_type {
-    return v[I];
-}
-
-static_assert(concepts::vector<matrix_row<int, 3>>);
 
 template<typename T, usize Rows, usize Cols>
-struct matrix_column {
-    using value_type = std::remove_const_t<T>;
-    inline static constexpr usize size = Rows;
-
-    template<typename U>
-    using rebind = vector<U, size>;
+struct matrix_col_adapter {
+    using value_type = T;
 
     template<typename U, usize N>
-    using rebind_n = vector<U, N>;
+    using rebind = vector<U, N>;
 
-    // contains the entire matrix offset by a stride
+    inline static constexpr usize size = Rows;
+
+    constexpr matrix_col_adapter() = delete;
+
+    template<usize Extent = std::dynamic_extent>
+    constexpr matrix_col_adapter(std::span<T, Extent> data)
+        : m_data(data) {}
+
+    constexpr auto operator[](usize i) const noexcept -> T const& { return m_data[Cols * i]; }
+    constexpr auto operator[](usize i) noexcept -> T& { return m_data[Cols * i]; }
+
+private:
     std::span<T> m_data;
-
-    constexpr auto operator[](usize i) const -> T const& { return m_data[index(i)]; }
-    constexpr auto operator[](usize i) -> T& { return m_data[index(i)]; }
-
-    constexpr auto index(usize row) const -> usize { return row * Cols; }
 };
 
-template<usize I, typename T, usize Rows, usize Cols>
-    requires(I < Rows)
-constexpr auto get(matrix_column<T, Rows, Cols> const& v) -> typename matrix_row<T, Cols>::value_type {
-    return v[I];
-}
-
-static_assert(concepts::vector<matrix_column<int, 3, 4>>);
-
-template<concepts::vector Vector>
-struct vector_matrix_adapter {
-    using value_type = typename Vector::value_type;
-    inline static constexpr usize rows = Vector::size;
-    inline static constexpr usize cols = 1;
-
-    template<typename U>
-    using rebind = matrix<U, rows, cols>;
-
-    template<typename U, usize NRows, usize NCols>
-    using rebind_n = matrix<U, NRows, NCols>;
-
-    template<typename U, usize Size>
-    using preferred_vector_type = vector<U, Size>;
-
-    Vector const& m_vec;
-
-    constexpr auto operator[](usize i) const -> concepts::generic_vector<value_type, 1> auto{
-        return typename Vector::template rebind<value_type, 1>{m_vec[i]};
-    }
-
-    constexpr auto column(usize i) const -> concepts::generic_vector<value_type, rows> auto{ return m_vec; }
-};
-
-static_assert(concepts::matrix<vector_matrix_adapter<vector<int, 3>>>);
-
-}  // namespace detail
-
-/// A simple row-major matrix.
 template<typename T, usize Rows, usize Cols>
 struct matrix {
     using value_type = T;
     inline static constexpr usize rows = Rows;
     inline static constexpr usize cols = Cols;
 
-    template<typename U>
-    using rebind = matrix<U, Rows, Cols>;
+    template<typename U, usize RRows, usize CCols>
+    using rebind = matrix<U, RRows, CCols>;
 
-    template<typename U, usize NRows, usize NCols>
-    using rebind_n = matrix<U, NRows, NCols>;
+    constexpr matrix() noexcept = default;
 
-    template<typename U, usize Size>
-    using preferred_vector_type = vector<U, Size>;
+    constexpr matrix(std::initializer_list<T> il) { std::ranges::copy(il, m_data); }
 
+    template<concepts::matrix Mat>
+        requires(!std::is_same_v<Mat, matrix>) && (Mat::rows == Rows && Mat::cols == Cols && std::is_convertible_v<typename Mat::value_type, T>)
+    constexpr matrix(Mat&& mat) noexcept {
+        for (auto i : std::views::iota(0uz, Rows)) {
+            for (auto j : std::views::iota(0uz, Cols)) {
+                std::construct_at(&m_data[j + i * Cols], std::move(mat[i][j]));
+            }
+        }
+    }
+
+    constexpr auto operator[](usize i) const noexcept { return matrix_row_adapter(std::span<const T, Cols>(&m_data[Cols * i], Cols)); }
+    constexpr auto operator[](usize i) noexcept { return matrix_row_adapter(std::span<T, Cols>(&m_data[Cols * i], Cols)); }
+
+    constexpr auto column(usize i) const noexcept { return matrix_col_adapter<const T, Rows, Cols>(std::span<const T>(m_data + i, Rows * Cols - i)); }
+    constexpr auto column(usize i) noexcept { return matrix_col_adapter<T, Rows, Cols>(std::span<T>(m_data + i, Rows * Cols - i)); }
+
+private:
     T m_data[Rows * Cols];
-
-    constexpr auto operator[](usize i) const -> detail::matrix_row<const T, Cols> {
-        return {std::span<const T, Cols>(m_data + Cols * i, Cols)};
-    }
-
-    constexpr auto operator[](usize i) -> detail::matrix_row<T, Cols> {
-        return {std::span<T, Cols>(m_data + Cols * i, Cols)};
-    }
-
-    constexpr auto column(usize i) const -> detail::matrix_column<const T, Rows, Cols> {
-        return {std::span<const T>(m_data + i, Rows * Cols - i)};
-    }
-
-    constexpr auto column(usize i) -> detail::matrix_column<T, Rows, Cols> {
-        return {std::span<T>(m_data + i, Rows * Cols - i)};
-    }
-
-    static constexpr auto identity() -> matrix requires(Rows == Cols);
-
-    static constexpr auto rotate(T theta) -> matrix requires(Rows == Cols && Rows == 2);
-
-    /// Rotation matrix in 3 dimensions.
-    /// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
-    static constexpr auto rotate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 3);
-
-    /// Homogenous rotation matrix in 3 dimensions.
-    /// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
-    static constexpr auto rotate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
-
-    static constexpr auto scale(T x, T y) -> matrix requires(Rows == Cols && Rows == 2);
-    static constexpr auto scale(T x, T y) -> matrix requires(Rows == Cols && Rows == 3);
-    static constexpr auto scale(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 3);
-    static constexpr auto scale(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
-
-    static constexpr auto translate(T x, T y) -> matrix requires(Rows == Cols && Rows == 3);
-    static constexpr auto translate(T x, T y, T z) -> matrix requires(Rows == Cols && Rows == 4);
 };
 
-static_assert(concepts::matrix<matrix<int, 3, 4>>);
-static_assert(concepts::matrix_backend<matrix<int, 3, 4>>);
-
-/*template<typename T, usize Size, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
-    requires concepts::matrix_backend<matrix_type<T, Size, Size>>
-constexpr auto identity_matrix() -> matrix_type<T, Size, Size>;
-
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
-    requires concepts::matrix_backend<matrix_type<T, 2, 2>>
-constexpr auto rotation_matrix(T theta) -> matrix_type<T, 2, 2>;
-
-/// Rotation matrix in 3 dimensions.
-/// For a vector [0, 0, 1]; x is pitch, y is yaw, z is roll
-template<typename T, template<typename U, usize Rows, usize Cols> class matrix_type = matrix>
-    requires concepts::matrix_backend<matrix_type<T, 3, 3>>
-constexpr auto rotation_matrix(T x, T y, T z) -> matrix_type<T, 3, 3>;*/
-
-/// @return
-/// The elementwise addition of <code>lhs</code> and <code>rhs</code> or a
-/// matrix-expression equivalent to it.
-template<concepts::matrix T, concepts::matrix U>
-    requires(T::rows == U::rows && T::cols == U::cols)
-constexpr auto operator+(T const& lhs, U const& rhs) -> concepts::nd_matrix<T::cols, T::rows> auto;
-
-template<concepts::matrix T>
-constexpr auto operator-(T const& v) -> concepts::nd_matrix_of_t<typename T::value_type, T::rows, T::cols> auto;
-
-template<concepts::matrix T>
-constexpr auto transpose(T const& v) -> concepts::nd_matrix_of_t<typename T::value_type, T::cols, T::rows> auto;
-
-/// @return
-/// The elementwise subtraction of <code>lhs</code> and <code>rhs</code> or a
-/// matrix-expression equivalent to it.
-template<concepts::matrix T, concepts::matrix U>
-    requires(T::rows == U::rows && T::cols == U::cols)
-constexpr auto operator-(T const& lhs, U const& rhs) -> concepts::nd_matrix<T::cols, T::rows> auto;
-
-template<concepts::matrix T, concepts::matrix U>
-    requires(T::cols == U::rows)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::nd_matrix<T::rows, U::cols> auto;
-
-template<concepts::matrix T, concepts::vector U>
-    requires(T::cols == U::size)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::nd_vector<T::rows> auto;
-
-template<concepts::vector T, concepts::matrix U>
-    requires(T::suze == U::rows)
-constexpr auto operator*(T const& lhs, U const& rhs) -> concepts::nd_vector<T::rows> auto{
-    return detail::vector_matrix_adapter{lhs} * rhs;
+template<concepts::matrix Mat>
+constexpr auto materialise(Mat mat) {
+    return typename Mat::template rebind<typename Mat::value_type, Mat::rows, Mat::cols>{std::move(mat)};
 }
 
-template<concepts::matrix T, concepts::matrix U>
-constexpr auto operator<=>(T const& lhs, U const& rhs) -> std::partial_ordering;
+template<typename T, usize Rows, usize Cols>
+constexpr auto materialise(matrix<T, Rows, Cols> mat) {
+    return mat;
+}
 
-constexpr auto operator==(concepts::matrix auto const& lhs, concepts::matrix auto const& rhs) -> bool {
-    return lhs <=> rhs == std::partial_ordering::equivalent;
+template<concepts::matrix Lhs, concepts::matrix Rhs>
+    requires(Lhs::rows == Rhs::rows && Lhs::cols == Rhs::cols) && std::equality_comparable_with<typename Lhs::value_type, typename Rhs::value_type>
+constexpr auto operator==(Lhs const& lhs, Rhs const& rhs) -> bool {
+    for (auto i : std::views::iota(0uz, Lhs::rows)) {
+        for (auto j : std::views::iota(0uz, Lhs::cols)) {
+            if (lhs[i][j] != rhs[i][j]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+namespace expressions {
+
+template<typename T, usize Rows, usize Cols, typename Fun>
+struct lazy_expr_matrix;
+
+template<typename T, usize Rows, usize Cols, typename Fun>
+struct lazy_expr_row_helper {
+    using value_type = T;
+    inline static constexpr usize size = Cols;
+
+    template<typename U, usize N>
+    using rebind = vector<U, N>;
+
+    using matrix_type = lazy_expr_matrix<T, Rows, Cols, Fun>;
+
+    lazy_expr_row_helper() = delete;
+
+    constexpr lazy_expr_row_helper(matrix_type const& mat, usize row)
+        : m_mat(mat)
+        , m_row(row) {}
+
+    constexpr auto operator[](usize col) const noexcept;
+
+private:
+    matrix_type const& m_mat;
+    usize m_row;
+};
+
+template<typename T, usize Rows, usize Cols, typename Fun>
+struct lazy_expr_col_helper {
+    using value_type = T;
+    inline static constexpr usize size = Cols;
+
+    template<typename U, usize N>
+    using rebind = vector<U, N>;
+
+    using matrix_type = lazy_expr_matrix<T, Rows, Cols, Fun>;
+
+    lazy_expr_col_helper() = delete;
+
+    constexpr lazy_expr_col_helper(matrix_type const& mat, usize col)
+        : m_mat(mat)
+        , m_col(col) {}
+
+    constexpr auto operator[](usize row) const noexcept;
+
+private:
+    matrix_type const& m_mat;
+    usize m_col;
+};
+
+/// "lazy" as in i was too lazy to make more specialised ones
+template<typename T, usize Rows, usize Cols, typename Fun>
+struct lazy_expr_matrix {
+    friend struct lazy_expr_row_helper<T, Rows, Cols, Fun>;
+    friend struct lazy_expr_col_helper<T, Rows, Cols, Fun>;
+
+    using value_type = T;
+    inline static constexpr usize rows = Rows;
+    inline static constexpr usize cols = Cols;
+
+    template<typename U, usize CCols, usize RRows>
+    using rebind = matrix<U, CCols, RRows>;
+
+    constexpr lazy_expr_matrix(Fun&& fun)
+        : m_fun(std::move(fun)) {}
+
+    constexpr auto operator[](usize row) const noexcept { return lazy_expr_row_helper(*this, row); }
+
+    constexpr auto column(usize col) const noexcept { return lazy_expr_col_helper(*this, col); }
+
+private:
+    Fun m_fun;
+};
+
+template<typename T, usize Rows, usize Cols, typename Fun>
+constexpr auto lazy_expr_row_helper<T, Rows, Cols, Fun>::operator[](usize col) const noexcept {
+    return m_mat.m_fun(m_row, col);
+}
+
+template<typename T, usize Rows, usize Cols, typename Fun>
+constexpr auto lazy_expr_col_helper<T, Rows, Cols, Fun>::operator[](usize row) const noexcept {
+    return m_mat.m_fun(row, m_col);
+}
+
+}  // namespace expressions
+
+template<concepts::matrix Mat>
+constexpr auto operator-(Mat mat) {
+    auto lambda = [mat](usize row, usize col) { return -mat[row][col]; };
+    return expressions::lazy_expr_matrix<typename Mat::value_type, Mat::rows, Mat::cols, typeof(lambda)>{std::move(lambda)};
+}
+
+template<concepts::matrix Mat>
+constexpr auto transpose(Mat mat) {
+    auto lambda = [mat](usize row, usize col) { return mat[col][row]; };
+    return expressions::lazy_expr_matrix<typename Mat::value_type, Mat::cols, Mat::rows, typeof(lambda)>{std::move(lambda)};
+}
+
+template<concepts::matrix Lhs, concepts::matrix Rhs>
+    requires(Lhs::rows == Rhs::cols) && requires(typename Lhs::value_type const& lhs, typename Rhs::value_type const& rhs) {
+        lhs* rhs;
+        lhs + rhs;
+    }
+constexpr auto operator*(Lhs const& lhs, Rhs const& rhs) {
+    /* [a b] * [x y z w]
+     * [c d]   [p q r s]
+     * [e f]
+     *
+     */
+
+    using result_type = typeof(std::declval<typename Lhs::value_type>() * std::declval<typename Rhs::value_type>());
+
+    auto ret = typename Lhs::template rebind<result_type, Lhs::rows, Rhs::cols> {};
+
+    for (auto row : std::views::iota(0uz, Lhs::rows)) {
+        for (auto col : std::views::iota(0uz, Rhs::cols)) {
+            auto sum = lhs[row][0] * rhs[0][col];
+            for (auto i : std::views::iota(1uz, Lhs::cols)) {
+                sum += lhs[row][i] * rhs[i][col];
+            }
+            ret[row][col] = sum;
+        }
+    }
+
+    return ret;
+}
+
+template<concepts::matrix Lhs, concepts::vector Rhs>
+    requires(Lhs::cols == Rhs::size)
+constexpr auto operator*(Lhs const& lhs, Rhs const& rhs) {
+    using result_type = typeof(std::declval<typename Lhs::value_type>() * std::declval<typename Rhs::value_type>());
+
+    auto ret = typename Rhs::template rebind<result_type, Lhs::rows> {};
+
+    for (auto row : std::views::iota(0uz, Lhs::rows)) {
+        auto sum = lhs[row][0] * rhs[0];
+        for (auto col : std::views::iota(1uz, Lhs::cols)) {
+            sum += lhs[row][col] * rhs[col];
+        }
+        ret[row] = sum;
+    }
+
+    return ret;
 }
 
 }  // namespace stf::blas
-
-#include <stuff/blas/detail/matops.ipp>

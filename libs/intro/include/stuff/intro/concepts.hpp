@@ -31,6 +31,7 @@ namespace stf::intro {
  * `iterate` with one of the two signatures:
  *  - `template<typename T> void fn(usize, T&&)`
  *  - `template<usize I, typename T> void fn(std::integral_constant<usize, I>, T&&)`
+ *  - `template<usize I, typename T> void fn(std::integral_constant<usize, I, std::type_identity<T>`
  *
  * runtime iterable inspectors have the same `iterate` function valid with only
  * the first signature mentioned above. on top of that they support iterating
