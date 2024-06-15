@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <tuple>
+#include <utility>
 
 namespace stf {
 
@@ -89,6 +90,27 @@ constexpr auto tuple_make(Tuple&& tuple)
 }
 
 static_assert(tuple_make<decltype([] constexpr { return true; })>(std::make_tuple())());
+
+namespace detail {
+
+template<typename Tuple, typename Fun, usize... Is>
+constexpr auto tuple_map_impl(Tuple&& tuple, Fun&& fun, std::integer_sequence<usize, Is...>) {
+    return std::tuple { std::invoke(std::forward<Fun>(fun), std::get<Is>(tuple), std::integral_constant<usize, Is>())... };
+}
+
+}  //
+
+template<typename Tuple, typename Fun>
+constexpr auto tuple_map(Tuple&& tuple, Fun&& fun) {
+    using std::tuple_size;
+    using actual_tuple = std::remove_cvref_t<Tuple>;
+    return detail::tuple_map_impl(std::forward<Tuple>(tuple), std::forward<Fun>(fun), std::make_index_sequence<tuple_size<actual_tuple>::value>());
+}
+
+static_assert(std::is_same_v<std::tuple<bool>, decltype(tuple_map(std::tuple { 1 }, [](auto...) { return true; }))>);
+static_assert(std::tuple { true } == tuple_map(std::tuple { 1 }, [](auto...) { return true; }));
+static_assert(std::tuple { true, true } == tuple_map(std::tuple { 1, 0 }, [](auto...) { return true; }));
+static_assert(tuple_map(std::tuple { -2, -1, 0, 1, 2 }, [](auto&& v, auto) -> bool { return v; }) == std::tuple {true, true, false, true, true});
 
 }  // namespace stf
 

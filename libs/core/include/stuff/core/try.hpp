@@ -1,6 +1,8 @@
 #pragma once
 
-#define __cpp_concepts 202002L
+#ifdef __clang__
+#    define __cpp_concepts 202002L
+#endif
 
 #include <expected>
 #include <optional>

@@ -18,7 +18,7 @@ concept vector = requires(T const& cv) {
     typename std::integral_constant<usize, T::size>;
 };
 
-}
+}  // namespace stf::blas::concepts
 
 namespace stf::blas {
 
@@ -41,7 +41,7 @@ struct vector {
     constexpr vector() noexcept = default;
 
     template<typename U, typename... Us>
-        requires (!std::is_same_v<std::remove_cvref_t<U>, vector>)
+        requires(!std::is_same_v<std::remove_cvref_t<U>, vector>)
     constexpr vector(U&& arg, Us&&... args) noexcept {
         init_from_mixed_args<U, Us...>(0, std::forward<U>(arg), std::forward<Us>(args)...);
     }
@@ -59,6 +59,12 @@ struct vector {
     }
 
     constexpr explicit operator std::array<T, N>() const { return m_data; }
+
+    constexpr operator std::pair<T, T>() const
+        requires(N == 2)
+    {
+        return {m_data[0], m_data[1]};
+    }
 
     constexpr auto begin() const noexcept -> const value_type* { return m_data.begin(); }
     constexpr auto end() const noexcept -> const value_type* { return m_data.end(); }
@@ -192,7 +198,9 @@ constexpr auto dot(Lhs const& lhs, Rhs const& rhs) {
 }
 
 template<concepts::vector Vec>
-constexpr auto abs(Vec const& vec) { return vec.map([](auto const& v) { return std::abs(v); }); }
+constexpr auto abs(Vec const& vec) {
+    return vec.map([](auto const& v) { return std::abs(v); });
+}
 
 template<concepts::vector Vec>
 constexpr auto length(Vec const& vec) {
