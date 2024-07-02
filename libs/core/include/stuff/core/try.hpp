@@ -70,7 +70,7 @@ struct try_helper<const volatile T> : try_helper<T> {};
         auto _res = (__VA_ARGS__);                                      \
         using _helper_type = ::stf::detail::try_helper<decltype(_res)>; \
         if (!_helper_type::has_value(_res)) {                           \
-            std::abort();                                               \
+            std::terminate();                                           \
         }                                                               \
         _helper_type::value(std::move(_res));                           \
     })

@@ -93,6 +93,12 @@ struct vector {
         return ret;
     }
 
+    template<typename U>
+        requires std::is_convertible_v<T, U>
+    constexpr auto cast() -> rebind<U, N> {
+        return map([](T v) -> U { return v; });
+    }
+
     // clang-format off
 #define ARITH(sym, oper)                                                                               \
     template<concepts::vector Other>                                                                   \

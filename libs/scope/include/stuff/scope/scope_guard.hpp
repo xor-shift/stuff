@@ -45,3 +45,10 @@ template<class EF>
 scope_success(EF) -> scope_success<EF>;
 
 }  // namespace stf::scope
+
+template<typename T>
+    requires(std::is_invocable_v<T>)
+constexpr auto operator++(T&& v) -> stf::scope_exit<T> { return std::forward<T>(v); }
+
+#define DEFER const auto _ = ++[&]
+#define DEFER_V const auto _ =
