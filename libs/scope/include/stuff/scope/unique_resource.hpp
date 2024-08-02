@@ -130,6 +130,7 @@ public:
     }
 
     constexpr auto get() const noexcept -> const R& { return m_resource; }
+    constexpr auto get() noexcept -> R& { return m_resource; }
     constexpr auto get_deleter() const noexcept -> const D& { return m_deleter; }
 
     constexpr auto operator*() const noexcept -> std::add_lvalue_reference_t<std::remove_pointer_t<R>>
