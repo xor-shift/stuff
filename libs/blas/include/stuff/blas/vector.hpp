@@ -53,8 +53,8 @@ struct vector {
                 (Vec::size == N) &&                //
                 (std::is_constructible_v<T, typename Vec::value_type const&>)
     constexpr vector(Vec const& other) noexcept {
-        for (auto const& [i, v] : other | std::views::enumerate) {
-            std::construct_at(&m_data[i], v);
+        for (auto i = 0uz; auto const& v : other) {
+            std::construct_at(&m_data[i++], v);
         }
     }
 
@@ -77,8 +77,8 @@ struct vector {
     template<typename Fun>
     constexpr auto map(Fun&& fun) const noexcept {
         auto ret = rebind<std::invoke_result_t<Fun, T const&>, N>{};
-        for (auto const& [i, v] : *this | std::views::enumerate) {
-            ret[i] = std::invoke(std::forward<Fun>(fun), v);
+        for (auto i = 0uz; auto const& v : *this) {
+            ret[i++] = std::invoke(std::forward<Fun>(fun), v);
         }
         return ret;
     }
@@ -87,8 +87,8 @@ struct vector {
         requires(Other::size == N) && std::is_invocable_v<Fun, T const&, typename Other::value_type const&>
     constexpr auto zip(Other const& other, Fun&& fun) const {
         auto ret = rebind<std::invoke_result_t<Fun, T const&, typename Other::value_type const&>, N>{};
-        for (auto const& [i, v] : *this | std::views::enumerate) {
-            ret[i] = std::invoke(std::forward<Fun>(fun), v, other[i]);
+        for (auto i = 0uz; auto const& v : *this) {
+            ret[i++] = std::invoke(std::forward<Fun>(fun), v, other[i]);
         }
         return ret;
     }
@@ -142,9 +142,9 @@ private:
         auto increment = 0uz;
         if constexpr (requires(U const& v) { v.size(); }) {
             // using V = typename U::value_type;
-            for (auto&& [j, v] : v | std::views::take(N) | std::views::enumerate) {
+            for (auto j = 0uz; auto&& arg : v | std::views::take(N)) {
                 increment += 1;
-                std::construct_at(&m_data[i + j], std::move(v));
+                std::construct_at(&m_data[i + j++], std::move(arg));
             }
         } else {
             std::construct_at(&m_data[i], std::forward<U>(v));
@@ -249,7 +249,7 @@ constexpr auto swizzle(Vec const& vec) {
 
     auto ret = typename Vec::template rebind<typename Vec::value_type, SwizzleString.size() - 1>{};
 
-    for (const auto& [i, c] : SwizzleString | std::views::enumerate) {
+    for (auto i = 0uz; const auto& c : SwizzleString) {
         switch (c) {
             case 'x': [[fallthrough]];
             case 'r': ret[i] = vec[0]; break;
@@ -265,6 +265,8 @@ constexpr auto swizzle(Vec const& vec) {
 
             default: std::unreachable();
         }
+
+        i += 1;
     }
 
     return ret;
