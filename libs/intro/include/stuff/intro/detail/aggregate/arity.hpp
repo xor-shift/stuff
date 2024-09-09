@@ -23,13 +23,24 @@ template<aggregate T, usize Index, usize Count>
     requires(Index < faux_arity<T>)
 struct arity_helper<T, Index, Count> : arity_helper<T, Index + member_length<T, Index>, Count + 1> {};
 
+template<typename T>
+struct arity_;
+
+template<typename T>
+    requires(std::is_aggregate_v<std::remove_cvref_t<T>>) && (!requires { std::remove_cvref_t<T>::_stf_arity; })
+struct arity_<T> : std::integral_constant<usize, detail::arity_helper<std::remove_cvref_t<T>>::value> {};
+
+template<typename T>
+    requires requires { std::remove_cvref_t<T>::_stf_arity; }
+struct arity_<T> : std::integral_constant<usize, std::remove_cvref_t<T>::_stf_arity> {};
+
 }  // namespace stf::intro::detail
 
 namespace stf::intro {
 
 template<typename T>
-    requires(std::is_aggregate_v<std::remove_cvref_t<T>>)
-inline static constexpr usize arity = detail::arity_helper<std::remove_cvref_t<T>>::value;
+    requires(std::is_aggregate_v<std::remove_cvref_t<T>>) || requires { std::remove_cvref_t<T>::_stf_arity; }
+inline static constexpr usize arity = detail::arity_<T>::value;
 
 }
 

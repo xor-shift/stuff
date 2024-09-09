@@ -41,6 +41,9 @@ inline static constexpr usize faux_arity_upper_bound = faux_arity_upper_bound_he
 template<typename T, upper_bound_strategy UBStrategy = upper_bound_strategy::powers_of_two>
 inline static constexpr usize faux_arity = binary_search<initializable_predicate<T>::template predicate, faux_arity_lower_bound<T>, faux_arity_upper_bound<T, UBStrategy>>::value;
 
+/*template<typename T>
+inline static constexpr usize faux_arity = forward_search<invert_predicate<initializable_predicate<T>::template predicate>::template predicate>::value - 1;*/
+
 }  // namespace stf::intro::detail
 
 #if STF_INTRO_RUN_CT_TESTS

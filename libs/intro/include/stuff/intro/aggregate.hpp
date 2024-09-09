@@ -36,7 +36,7 @@ struct aggregate_introspector {
     using intro_type = std::remove_cvref_t<T>;
 
     static constexpr auto size() -> usize { return arity<T>; }
-    static constexpr auto size(intro_type const& v) -> usize { return size(); }
+    static constexpr auto size([[maybe_unused]] intro_type const& v) -> usize { return size(); }
 
     template<usize I>
         requires(I < size())

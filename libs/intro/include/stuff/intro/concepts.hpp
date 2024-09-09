@@ -178,7 +178,7 @@ concept variant_introspector =  //
   requires(const typename Intro::intro_type& clval) {
       { Intro::template holds_alternative<typename Intro::template nth_type<0>>(clval) } -> std::convertible_to<bool>;
       { Intro::held_index(clval) } -> std::convertible_to<usize>;
-      Intro::visit([]<typename T>(T&& v) -> void {}, clval);
+      Intro::visit([]<typename T>([[maybe_unused]] T&& v) -> void {}, clval);
   };
 
 /**

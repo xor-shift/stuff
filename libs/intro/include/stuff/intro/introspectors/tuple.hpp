@@ -83,8 +83,8 @@ public:
     using nth_type = std::tuple_element_t<I, std::tuple<Ts...>>;
 
     static constexpr auto size() -> usize { return sizeof...(Ts); }
-    static constexpr auto size(std::tuple<Ts...> const& v) -> usize { return sizeof...(Ts); }
-    static constexpr auto size(pair_type const& v) -> usize requires(sizeof...(Ts) == 2) { return 2uz; }
+    static constexpr auto size([[maybe_unused]] std::tuple<Ts...> const& v) -> usize { return sizeof...(Ts); }
+    static constexpr auto size([[maybe_unused]] pair_type const& v) -> usize requires(sizeof...(Ts) == 2) { return 2uz; }
 
     template<usize I, typename Tuple>
         requires(std::is_same_v<std::remove_cvref_t<Tuple>, std::tuple<Ts...>> ||
